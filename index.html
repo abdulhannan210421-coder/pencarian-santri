@@ -235,12 +235,16 @@
       }
 
       displayHasil.forEach(row => {
-        const idPps = row[0] ? row[0].trim() : '';
-        const nama = row[1] ? row[1].trim() : 'Tanpa Nama';
+    const idPps = row[0] ? row[0].trim() : '';
+    const nama = row[1] ? row[1].trim() : 'Tanpa Nama';
 
-        const isMutaallim = DB.mutaallimMap.hasOwnProperty(idPps);
-        const isMualim = DB.mualimMap.hasOwnProperty(idPps);
-        const isTahfidz = DB.tahfidzMap.hasOwnProperty(idPps);
+    // Tambahkan kode ini di sini 👇
+    const indexKontak = DB.headersUtama.findIndex(header => header.toUpperCase() === "KONTAK WALI");
+    let infoKontakWali = (indexKontak !== -1) ? row[indexKontak] : "";
+
+    const isMutaallim = DB.mutaallimMap.hasOwnProperty(idPps);
+    const isMualim = DB.mualimMap.hasOwnProperty(idPps);
+    const isTahfidz = DB.tahfidzMap.hasOwnProperty(idPps);
 
         let statusBadges = [];
         if (isMutaallim) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-amber-100 text-amber-800 border-amber-300">Muta'allim</span>`);
@@ -280,15 +284,22 @@
 
             ${statusSectionsHtml}
 
-            <!-- TOMBOL LIHAT FOTO SANTRI -->
-            <div class="mt-4 pt-3 border-t border-gray-200 flex justify-end">
-              <button onclick="openPhotoModal('${idPps}', '${nama.replace(/'/g, "\\'")}')" 
-                      class="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-4 py-2 rounded-lg border border-emerald-200 text-xs transition shadow-sm">
-                🖼️ Lihat Foto Santri
-              </button>
-            </div>
-          </div>`;
+            <!-- TOMBOL LIHAT FOTO SANTRI & WHATSAPP -->
+    <div class="mt-4 pt-3 border-t border-gray-200 flex flex-wrap items-center justify-between gap-2">
+        
+        <!-- Tombol WhatsApp di sebelah kiri -->
+        <div>
+            ${buatTombolWA(infoKontakWali)}
+        </div>
 
+        <!-- Tombol Lihat Foto Santri di sebelah kanan -->
+        <button onclick="openPhotoModal('${idPps}', '${nama.replace(/'/g, "\\'")}')"
+            class="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-4 py-2 rounded-lg border border-emerald-200 text-xs transition shadow-sm">
+            🖼️ Lihat Foto Santri
+        </button>
+
+    </div>
+</div>`;
         container.innerHTML += card;
       });
     }
@@ -339,6 +350,34 @@ function getSafeImageUrl(rawUrl) {
 
   // Jika bukan link Google Drive, kembalikan url aslinya
   return url;
+}
+    // Fungsi untuk memproses dan membuat tombol WhatsApp
+function buatTombolWA(kolomKontak) {
+  if (!kolomKontak || kolomKontak.trim() === "") {
+    return `<span class="text-gray-400 text-sm">Tidak ada data kontak</span>`;
+  }
+
+  let nomorArray = kolomKontak.split(',');
+  let kumpulanTombol = '';
+
+  nomorArray.forEach(nomor => {
+    let nomorBersih = nomor.trim().replace(/[\s\-\+]/g, '');
+
+    if (nomorBersih.startsWith('0')) {
+      nomorBersih = '62' + nomorBersih.substring(1);
+    }
+
+    if (nomorBersih.length > 7) {
+      kumpulanTombol += `
+        <a href="https://wa.me/${nomorBersih}" target="_blank" rel="noopener noreferrer" 
+           class="inline-flex items-center justify-center px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold shadow-sm hover:bg-green-600 mr-2 mb-2 transition-all">
+           💬 WA: ${nomorBersih}
+        </a>
+      `;
+    }
+  });
+
+  return kumpulanTombol;
 }
     // ==========================================
     // FUNGSI POPUP / MODAL FOTO SANTRI (UNTUK GITHUB)
