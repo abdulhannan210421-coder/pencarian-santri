@@ -313,7 +313,33 @@
           </div>
         </div>`;
     }
+// Fungsi untuk mengubah link Drive biasa menjadi link gambar yang aman (bebas CORS)
+function getSafeImageUrl(rawUrl) {
+  if (!rawUrl) return "";
+  let url = rawUrl.trim();
 
+  let fileId = "";
+
+  // Deteksi ID dari format lh3.googleusercontent.com/d/ID
+  let match1 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match1) fileId = match1[1];
+
+  // Deteksi ID dari format drive.google.com/file/d/ID/view
+  let match2 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (!fileId && match2) fileId = match2[1];
+
+  // Deteksi ID dari format drive.google.com/open?id=ID
+  let match3 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (!fileId && match3) fileId = match3[1];
+
+  if (fileId) {
+    // Ubah ke format Thumbnail API milik Google (Sangat stabil untuk website eksternal)
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+  }
+
+  // Jika bukan link Google Drive, kembalikan url aslinya
+  return url;
+}
     // ==========================================
     // FUNGSI POPUP / MODAL FOTO SANTRI (UNTUK GITHUB)
     // ==========================================
@@ -347,14 +373,15 @@
 
       loading.classList.add('hidden');
 
-      // Cek apakah santri ketemu, dan kolom foto tidak kosong
+// Cek apakah santri ketemu, dan kolom foto tidak kosong
       if (santriPilih && fotoIndex !== -1 && santriPilih[fotoIndex] && santriPilih[fotoIndex] !== "") {
-          img.src = santriPilih[fotoIndex];
+          // Panggil fungsi getSafeImageUrl di sini
+          const safeUrl = getSafeImageUrl(santriPilih[fotoIndex]);
+          img.src = safeUrl;
       } else {
           showPhotoError("Foto belum tersedia di database.");
       }
-    } // <--- INI DIA! Kurung kurawal penutup fungsi openPhotoModal yang sebelumnya hilang 
-
+    } // <--- penutup fungsi openPhotoModal
     function onImageLoaded() {
       document.getElementById('photoLoading').classList.add('hidden');
       document.getElementById('santriImg').classList.remove('hidden');
