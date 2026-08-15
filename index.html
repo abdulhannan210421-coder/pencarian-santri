@@ -340,20 +340,18 @@
         return;
       }
 
-      // Memanggil fungsi pencarian foto melalui API Web App
-      fetch( + "?action=getPhoto&idPps=" + encodeURIComponent(idPps))
-        .then(res => res.json())
-        .then(res => {
-          if (res && res.success && res.photoUrl) {
-            img.src = res.photoUrl;
-          } else {
-            showPhotoError(res ? res.message : "Foto belum tersedia");
-          }
-        })
-        .catch(err => {
-          showPhotoError("Gagal memuat foto");
-        });
-    }
+// Langsung ambil link foto dari data tabel yang sudah disinkronkan
+const santriPilih = dataUtama.find(item => item["ID PPS"] == idPps); 
+// (Catatan: pastikan 'dataUtama' adalah nama variabel penampung data dari Sheet kamu, sesuaikan jika namanya beda)
+
+loading.classList.add('hidden');
+
+if (santriPilih && santriPilih.FOTO && santriPilih.FOTO !== "") {
+    img.src = santriPilih.FOTO;
+    img.classList.remove('hidden');
+} else {
+    showPhotoError("Foto belum tersedia di database.");
+}
 
     function onImageLoaded() {
       document.getElementById('photoLoading').classList.add('hidden');
