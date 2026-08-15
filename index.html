@@ -190,14 +190,26 @@
       }
     }
 
+    // ==========================================
+    // VARIABEL GLOBAL UNTUK PENCARIAN & PAGINATION
+    // ==========================================
+    let searchTimeout = null;
+    let searchResults = [];
+    let currentCardIndex = 0;
+
+    // 1. FITUR DEBOUNCE (Menunda pencarian sampai user selesai mengetik)
     function handleKeyPress(event) {
+      clearTimeout(searchTimeout);
       if (event.key === "Enter") {
         lakukanPencarianFast(true);
       } else {
-        lakukanPencarianFast(false);
+        searchTimeout = setTimeout(() => {
+          lakukanPencarianFast(false);
+        }, 300); // Tunggu 300ms, baru proses data
       }
     }
 
+    // 2. FITUR JOB PARALEL / ASYNC PROCESSING
     function lakukanPencarianFast(isForce) {
       const inputEl = document.getElementById('searchInput');
       const keyword = inputEl.value.toLowerCase().trim();
@@ -206,6 +218,8 @@
 
       container.innerHTML = '';
       infoMsg.innerHTML = '';
+      searchResults = [];
+      currentCardIndex = 0;
 
       if (!keyword) return;
 
@@ -213,103 +227,136 @@
         return;
       }
 
-      const hasil = DB.dataUtama.filter(row => {
-        const idPps = row[0] ? row[0].toLowerCase().trim() : '';
-        const nama = row[1] ? row[1].toLowerCase().trim() : '';
-        return idPps.includes(keyword) || nama.includes(keyword);
-      });
+      // Tampilkan indikator selagi data diproses di latar belakang
+      container.innerHTML = `<div class="text-center text-emerald-600 py-6 text-sm font-semibold animate-pulse">Memproses data...</div>`;
 
-      if (hasil.length === 0) {
-        container.innerHTML = `<div class="text-center text-gray-500 py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">Data santri tidak ditemukan.</div>`;
-        return;
-      }
-
-      const maxLimit = 30;
-      const displayHasil = hasil.slice(0, maxLimit);
-
-      if (hasil.length > maxLimit) {
-        infoMsg.innerHTML = `
-          <div class="bg-amber-50 border border-amber-200 text-amber-800 text-xs p-3 rounded-lg">
-            Ditemukan <strong>${hasil.length}</strong> data. Menampilkan <strong>30 data pertama</strong> agar tidak lambat. Ketik nama lebih spesifik jika data belum terlihat.
-          </div>`;
-      }
-
-      displayHasil.forEach(row => {
-    const idPps = row[0] ? row[0].trim() : '';
-    const nama = row[1] ? row[1].trim() : 'Tanpa Nama';
-
-    // Tambahkan kode ini di sini 👇
-    const indexKontak = DB.headersUtama.findIndex(header => header.toUpperCase() === "KONTAK WALI");
-    let infoKontakWali = (indexKontak !== -1) ? row[indexKontak] : "";
-
-    const isMutaallim = DB.mutaallimMap.hasOwnProperty(idPps);
-    const isMualim = DB.mualimMap.hasOwnProperty(idPps);
-    const isTahfidz = DB.tahfidzMap.hasOwnProperty(idPps);
-
-        let statusBadges = [];
-        if (isMutaallim) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-amber-100 text-amber-800 border-amber-300">Muta'allim</span>`);
-        if (isMualim) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-blue-100 text-blue-800 border-blue-300">Mu'allim</span>`);
-        if (isTahfidz) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-emerald-100 text-emerald-800 border-emerald-300">Tahfidz</span>`);
-        if (statusBadges.length === 0) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-gray-100 text-gray-800 border-gray-300">Santri Regular</span>`);
-
-        let detailUtamaHtml = '';
-        DB.headersUtama.forEach((header, idx) => {
-            // PERBAIKAN: Menyembunyikan FOTO dan KONTAK WALI dari daftar teks
-            let namaHeader = header.toUpperCase();
-            if (namaHeader === "FOTO" || namaHeader === "KONTAK WALI" || namaHeader === "WA") {
-                return; // Abaikan dan lanjut ke kolom berikutnya
-            }
-
-            let val = (row[idx] !== "" && row[idx] !== null && row[idx] !== undefined) ? row[idx] : "-";
-            detailUtamaHtml += `
-            <div class="bg-white p-2 rounded border border-gray-200">
-                <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider">${header}</span>
-                <span class="text-sm font-medium text-gray-800">${val}</span>
-            </div>`;
+      // Lempar pemrosesan ke antrean berikutnya agar layar tidak freeze
+      setTimeout(() => {
+        searchResults = DB.dataUtama.filter(row => {
+          const idPps = row[0] ? row[0].toLowerCase().trim() : '';
+          const nama = row[1] ? row[1].toLowerCase().trim() : '';
+          return idPps.includes(keyword) || nama.includes(keyword);
         });
-        
-        let statusSectionsHtml = '';
-        if (isMutaallim) statusSectionsHtml += buildExtraCard("Detail Muta'allim", DB.mutaallimMap[idPps], 'bg-amber-50 border-amber-200 text-amber-900');
-        if (isMualim) statusSectionsHtml += buildExtraCard("Detail Mu'allim", DB.mualimMap[idPps], 'bg-blue-50 border-blue-200 text-blue-900');
-        if (isTahfidz) statusSectionsHtml += buildExtraCard("Detail Tahfidz", DB.tahfidzMap[idPps], 'bg-emerald-50 border-emerald-200 text-emerald-900');
 
-        const card = `
-          <div class="border border-gray-200 rounded-xl p-5 bg-gray-50 shadow-sm hover:shadow-md transition">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-4 pb-3 border-b border-gray-200">
-              <div>
-                <span class="text-xs font-semibold text-emerald-600 uppercase tracking-wide">ID PPS: ${idPps || '-'}</span>
-                <h2 class="text-xl font-bold text-gray-800">${nama}</h2>
-              </div>
-              <div class="flex flex-wrap gap-1">${statusBadges.join(' ')}</div>
-            </div>
+        if (searchResults.length === 0) {
+          container.innerHTML = `<div class="text-center text-gray-500 py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">Data santri tidak ditemukan.</div>`;
+          return;
+        }
 
-            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Informasi Utama Santri</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-              ${detailUtamaHtml}
-            </div>
-
-            ${statusSectionsHtml}
-
-            <!-- TOMBOL LIHAT FOTO SANTRI & WHATSAPP -->
-    <div class="mt-4 pt-3 border-t border-gray-200 flex flex-wrap items-center justify-between gap-2">
-        
-        <!-- Tombol WhatsApp di sebelah kiri -->
-        <div>
-            ${buatTombolWA(infoKontakWali)}
-        </div>
-
-        <!-- Tombol Lihat Foto Santri di sebelah kanan -->
-        <button onclick="openPhotoModal('${idPps}', '${nama.replace(/'/g, "\\'")}')"
-            class="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-4 py-2 rounded-lg border border-emerald-200 text-xs transition shadow-sm">
-            🖼️ Lihat Foto Santri
-        </button>
-
-    </div>
-</div>`;
-        container.innerHTML += card;
-      });
+        // Jika ketemu, langsung render kartu pada halaman pertama
+        renderCurrentCard();
+      }, 10);
     }
 
+    // 3. FITUR PAGINATION (Model ID Card)
+    function renderCurrentCard() {
+      const container = document.getElementById('resultContainer');
+      const infoMsg = document.getElementById('infoMessage');
+      
+      if (searchResults.length === 0) return;
+
+      const row = searchResults[currentCardIndex];
+      const total = searchResults.length;
+
+      // Header Navigasi Info
+      infoMsg.innerHTML = `
+        <div class="flex justify-between items-center bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm p-3 rounded-lg mb-2 shadow-sm">
+          <span class="font-semibold">Ditemukan ${total} Santri</span>
+          <span class="bg-emerald-200 text-emerald-900 px-3 py-1 rounded-full text-xs font-bold shadow-inner">
+             Kartu ${currentCardIndex + 1} dari ${total}
+          </span>
+        </div>`;
+
+      const idPps = row[0] ? row[0].trim() : '';
+      const nama = row[1] ? row[1].trim() : 'Tanpa Nama';
+
+      const indexKontak = DB.headersUtama.findIndex(header => header.toUpperCase() === "KONTAK WALI");
+      let infoKontakWali = (indexKontak !== -1) ? row[indexKontak] : "";
+
+      const isMutaallim = DB.mutaallimMap.hasOwnProperty(idPps);
+      const isMualim = DB.mualimMap.hasOwnProperty(idPps);
+      const isTahfidz = DB.tahfidzMap.hasOwnProperty(idPps);
+
+      let statusBadges = [];
+      if (isMutaallim) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-amber-100 text-amber-800 border-amber-300">Muta'allim</span>`);
+      if (isMualim) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-blue-100 text-blue-800 border-blue-300">Mu'allim</span>`);
+      if (isTahfidz) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-emerald-100 text-emerald-800 border-emerald-300">Tahfidz</span>`);
+      if (statusBadges.length === 0) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-gray-100 text-gray-800 border-gray-300">Santri Regular</span>`);
+
+      let detailUtamaHtml = '';
+      DB.headersUtama.forEach((header, idx) => {
+        let namaHeader = header.toUpperCase();
+        if (namaHeader === "FOTO" || namaHeader === "KONTAK WALI" || namaHeader === "WA") return;
+
+        let val = (row[idx] !== "" && row[idx] !== null && row[idx] !== undefined) ? row[idx] : "-";
+        detailUtamaHtml += `
+        <div class="bg-white p-2 rounded border border-gray-200">
+            <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider">${header}</span>
+            <span class="text-sm font-medium text-gray-800">${val}</span>
+        </div>`;
+      });
+      
+      let statusSectionsHtml = '';
+      if (isMutaallim) statusSectionsHtml += buildExtraCard("Detail Muta'allim", DB.mutaallimMap[idPps], 'bg-amber-50 border-amber-200 text-amber-900');
+      if (isMualim) statusSectionsHtml += buildExtraCard("Detail Mu'allim", DB.mualimMap[idPps], 'bg-blue-50 border-blue-200 text-blue-900');
+      if (isTahfidz) statusSectionsHtml += buildExtraCard("Detail Tahfidz", DB.tahfidzMap[idPps], 'bg-emerald-50 border-emerald-200 text-emerald-900');
+
+      // Tombol Navigasi Pagination
+      let navButtons = `
+        <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+          <button onclick="prevCard()" ${currentCardIndex === 0 ? 'disabled class="px-4 py-2.5 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm font-bold"' : 'class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition text-sm font-bold shadow-md"'}>
+            &laquo; Sebelumnya
+          </button>
+          
+          <button onclick="nextCard()" ${currentCardIndex === total - 1 ? 'disabled class="px-4 py-2.5 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm font-bold"' : 'class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition text-sm font-bold shadow-md"'}>
+            Selanjutnya &raquo;
+          </button>
+        </div>`;
+
+      const card = `
+      <div class="border border-gray-200 rounded-xl p-5 bg-gray-50 shadow-md transition transform">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-4 pb-3 border-b border-gray-200">
+          <div>
+            <span class="text-xs font-semibold text-emerald-600 uppercase tracking-wide">ID PPS: ${idPps || '-'}</span>
+            <h2 class="text-xl font-bold text-gray-800">${nama}</h2>
+          </div>
+          <div class="flex flex-wrap gap-1">${statusBadges.join(' ')}</div>
+        </div>
+
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Informasi Utama Santri</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+          ${detailUtamaHtml}
+        </div>
+
+        ${statusSectionsHtml}
+
+        <div class="mt-4 pt-3 border-t border-gray-200 flex flex-wrap items-center justify-between gap-2">
+          <div>${buatTombolWA(infoKontakWali)}</div>
+          <button onclick="openPhotoModal('${idPps}', '${nama.replace(/'/g, "\\'")}')"
+              class="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-4 py-2 rounded-lg border border-emerald-200 text-xs transition shadow-sm">
+              🖼️ Lihat Foto Santri
+          </button>
+        </div>
+
+        ${total > 1 ? navButtons : ''}
+      </div>`;
+      
+      container.innerHTML = card;
+    }
+
+    function nextCard() {
+      if (currentCardIndex < searchResults.length - 1) {
+        currentCardIndex++;
+        renderCurrentCard();
+      }
+    }
+
+    function prevCard() {
+      if (currentCardIndex > 0) {
+        currentCardIndex--;
+        renderCurrentCard();
+      }
+    }
     function buildExtraCard(title, dataObj, colorClass) {
       let items = '';
       for (let key in dataObj) {
