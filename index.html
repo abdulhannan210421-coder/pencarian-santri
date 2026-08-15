@@ -108,7 +108,7 @@
 
   <script>
     // URL Web App Google Script Kamu
-    const API_URL = "https://script.google.com/macros/s/AKfycbzpmjBCV-wmn-tr3RGh3DJ35u1dFnnhBzGUXiQKb6CPPEqO1CEHZY1uKV9xAYf9zHw/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbzV_l5rAXgnapi2c3ZH90WOusrHgN-Ny9wjaFJ9tczCl1mkz1pURw_sZUYhEF4YY6byRg/exec";
 
     const scrollArea = document.getElementById('scrollableArea');
     let startY = 0;
@@ -341,7 +341,7 @@
       }
 
       // Memanggil fungsi pencarian foto melalui API Web App
-      fetch(API_URL + "?action=getPhoto&idPps=" + encodeURIComponent(idPps))
+      fetch( + "?action=getPhoto&idPps=" + encodeURIComponent(idPps))
         .then(res => res.json())
         .then(res => {
           if (res && res.success && res.photoUrl) {
