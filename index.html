@@ -136,21 +136,19 @@
       tahfidzMap: {}
     };
 
-    window.onload = function() {
-      const localData = localStorage.getItem('SANTRI_DB_CACHE');
-      if (localData) {
+window.onload = function() {
+    const localData = localStorage.getItem('SANTRI_DB_CACHE');
+    if (localData) {
         try {
-          const parsed = JSON.parse(localData);
-          initDatabase(parsed, true);
-          fetchDataFromServer(false);
-          return;
+            const parsed = JSON.parse(localData);
+            initDatabase(parsed, true);
+            return; // Cukup sampai sini saja, data langsung dimuat instan!
         } catch(e) {
-          localStorage.removeItem('SANTRI_DB_CACHE');
+            localStorage.removeItem('SANTRI_DB_CACHE');
         }
-      }
-      fetchDataFromServer(true);
-    };
-
+    }
+    fetchDataFromServer(true);
+};
     function fetchDataFromServer(showLoadingUI) {
       if (showLoadingUI) {
         document.getElementById('loading').classList.remove('hidden');
