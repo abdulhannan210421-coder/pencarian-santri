@@ -370,6 +370,10 @@ if (santriPilih && santriPilih.FOTO && santriPilih.FOTO !== "") {
     function closePhotoModal() {
       document.getElementById('photoModal').classList.add('hidden');
     }
+      function forceRefreshData() {
+        localStorage.removeItem('SANTRI_DB_CACHE');
+        location.reload();
+    }
   </script>
 </body>
 </html>
