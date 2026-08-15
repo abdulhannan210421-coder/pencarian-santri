@@ -254,14 +254,20 @@
 
         let detailUtamaHtml = '';
         DB.headersUtama.forEach((header, idx) => {
-          let val = (row[idx] !== "" && row[idx] !== null && row[idx] !== undefined) ? row[idx] : "-";
-          detailUtamaHtml += `
+            // PERBAIKAN: Menyembunyikan FOTO dan KONTAK WALI dari daftar teks
+            let namaHeader = header.toUpperCase();
+            if (namaHeader === "FOTO" || namaHeader === "KONTAK WALI" || namaHeader === "WA") {
+                return; // Abaikan dan lanjut ke kolom berikutnya
+            }
+
+            let val = (row[idx] !== "" && row[idx] !== null && row[idx] !== undefined) ? row[idx] : "-";
+            detailUtamaHtml += `
             <div class="bg-white p-2 rounded border border-gray-200">
-              <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider">${header}</span>
-              <span class="text-sm font-medium text-gray-800">${val}</span>
+                <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider">${header}</span>
+                <span class="text-sm font-medium text-gray-800">${val}</span>
             </div>`;
         });
-
+        
         let statusSectionsHtml = '';
         if (isMutaallim) statusSectionsHtml += buildExtraCard("Detail Muta'allim", DB.mutaallimMap[idPps], 'bg-amber-50 border-amber-200 text-amber-900');
         if (isMualim) statusSectionsHtml += buildExtraCard("Detail Mu'allim", DB.mualimMap[idPps], 'bg-blue-50 border-blue-200 text-blue-900');
@@ -352,33 +358,34 @@ function getSafeImageUrl(rawUrl) {
   return url;
 }
     // Fungsi untuk memproses dan membuat tombol WhatsApp
-function buatTombolWA(kolomKontak) {
-  if (!kolomKontak || kolomKontak.trim() === "") {
-    return `<span class="text-gray-400 text-sm">Tidak ada data kontak</span>`;
-  }
+    function buatTombolWA(kolomKontak) {
+      if (!kolomKontak || kolomKontak.trim() === "") {
+        return `<span class="text-gray-400 text-sm">Tidak ada data kontak</span>`;
+      }
 
-  let nomorArray = kolomKontak.split(',');
-  let kumpulanTombol = '';
+      // PERBAIKAN: Pisahkan nomor berdasarkan koma (,) ATAU titik koma (;)
+      let nomorArray = kolomKontak.split(/[;,]+/);
+      let kumpulanTombol = '';
 
-  nomorArray.forEach(nomor => {
-    let nomorBersih = nomor.trim().replace(/[\s\-\+]/g, '');
+      nomorArray.forEach(nomor => {
+        let nomorBersih = nomor.trim().replace(/[\s\-\+]/g, '');
 
-    if (nomorBersih.startsWith('0')) {
-      nomorBersih = '62' + nomorBersih.substring(1);
+        if (nomorBersih.startsWith('0')) {
+          nomorBersih = '62' + nomorBersih.substring(1);
+        }
+
+        if (nomorBersih.length > 7) {
+          kumpulanTombol += `
+            <a href="https://wa.me/${nomorBersih}" target="_blank" rel="noopener noreferrer" 
+               class="inline-flex items-center justify-center px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold shadow-sm hover:bg-green-600 mr-2 mb-2 transition-all">
+               💬 WA: ${nomorBersih}
+            </a>
+          `;
+        }
+      });
+
+      return kumpulanTombol;
     }
-
-    if (nomorBersih.length > 7) {
-      kumpulanTombol += `
-        <a href="https://wa.me/${nomorBersih}" target="_blank" rel="noopener noreferrer" 
-           class="inline-flex items-center justify-center px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold shadow-sm hover:bg-green-600 mr-2 mb-2 transition-all">
-           💬 WA: ${nomorBersih}
-        </a>
-      `;
-    }
-  });
-
-  return kumpulanTombol;
-}
     // ==========================================
     // FUNGSI POPUP / MODAL FOTO SANTRI (UNTUK GITHUB)
     // ==========================================
