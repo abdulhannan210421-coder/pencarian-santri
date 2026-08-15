@@ -2,18 +2,21 @@
 <html lang="id" class="h-full overflow-hidden">
 <head>
   <meta charset="UTF-8">
-  <meta name="google-site-verification" content="a8VwvtD9EcW8vkh2b7SiWVIPnScssr8ODeT2SKiuTmU" />
+  <meta name="google-site-verification" content="a8VwvtD9Ecw8vkh2b7S1wVIPnScssr8ODeT2SKiuTmU" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Pencarian Data Santri</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* KUNCI UTAMA ANTI PULL-TO-REFRESH */
     html, body {
       height: 100%;
       width: 100%;
-      overflow: hidden;
+      overflow: hidden; /* Mencegah body utama dari scroll/bounce bawaan browser */
       overscroll-behavior: none;
       touch-action: none;
     }
+
+    /* Container khusus untuk scroll yang terisolasi dari gesture browser */
     #scrollableArea {
       height: 100%;
       overflow-y: auto;
@@ -24,6 +27,7 @@
   </style>
 </head>
 <body class="bg-slate-100">
+  <!-- Wrapper Khusus Scroll -->
   <div id="scrollableArea" class="p-4 md:p-8">
     <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6 my-2">
       <div class="flex justify-between items-center mb-4">
@@ -36,9 +40,10 @@
       <h1 class="text-2xl md:text-3xl font-bold text-center text-emerald-700 mb-2">Pencarian Data Santri</h1>
       <p class="text-center text-gray-500 mb-6 text-sm">Cari berdasarkan <strong>ID PPS</strong> atau <strong>Nama Santri</strong></p>
 
+      <!-- Form Pencarian -->
       <div class="flex gap-2 mb-2">
         <input type="text" id="searchInput" placeholder="Ketik minimal 3 huruf atau ID PPS..." 
-               class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm disabled:bg-gray-100"
+               class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm disabled:bg-gray-100" 
                onkeyup="handleKeyPress(event)" disabled>
         <button onclick="lakukanPencarianFast(true)" id="searchBtn" disabled
                 class="bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-700 transition shadow-sm disabled:opacity-50">
@@ -47,6 +52,7 @@
       </div>
       <p class="text-xs text-gray-400 mb-6">*Pencarian otomatis berjalan jika mengetik minimal 3 karakter / ID lengkap.</p>
 
+      <!-- Indicator Loading -->
       <div id="loading" class="text-center py-6 text-emerald-600 font-semibold flex items-center justify-center gap-2">
         <svg class="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -55,29 +61,80 @@
         <span id="loadingText">Memuat data santri...</span>
       </div>
 
+      <!-- Tempat Info Jumlah Hasil & List Data -->
       <div id="infoMessage" class="mb-4"></div>
       <div id="resultContainer" class="space-y-6"></div>
     </div>
   </div>
 
+  <!-- MODAL POPUP FOTO SANTRI -->
+  <div id="photoModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 relative shadow-2xl overflow-hidden flex flex-col items-center">
+      <!-- Tombol Close -->
+      <button onclick="closePhotoModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center font-bold transition">
+        ✕
+      </button>
+
+      <h3 id="modalName" class="text-lg font-bold text-gray-800 text-center pr-6 mb-1">Foto Santri</h3>
+      <p id="modalPps" class="text-xs text-gray-500 mb-4 text-center"></p>
+
+      <!-- Container Gambar & Loading -->
+      <div class="w-full h-80 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative border border-slate-200 shadow-inner">
+        <!-- Spinner Loading Foto -->
+        <div id="photoLoading" class="flex flex-col items-center gap-2 text-emerald-600">
+          <svg class="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="text-xs font-medium text-gray-500">Mencari foto terbaru...</span>
+        </div>
+
+        <!-- Tag Image -->
+        <img id="santriImg" src="" alt="Foto Santri" class="w-full h-full object-cover hidden" onload="onImageLoaded()" onerror="onImageError()">
+        
+        <!-- Peringatan Jika Foto Tidak Ada -->
+        <div id="photoError" class="hidden text-center p-4">
+          <p class="text-3xl mb-2">📷</p>
+          <p id="photoErrorMsg" class="text-sm font-semibold text-gray-600">Foto tidak ditemukan</p>
+          <p class="text-xs text-gray-400 mt-1">Belum ada foto yang diunggah untuk ID PPS ini.</p>
+        </div>
+      </div>
+
+      <button onclick="closePhotoModal()" class="mt-5 w-full bg-slate-200 hover:bg-slate-300 text-slate-700 py-2.5 rounded-xl font-medium transition text-sm">
+        Tutup
+      </button>
+    </div>
+  </div>
+
   <script>
-    // ⚠️ PASTE URL GOOGLE APPS SCRIPT KAMU DI SINI:
-    const API_URL = "https://script.google.com/macros/s/AKfycbzpmjBCV-wmN-tr3RGh3RvDJ35u1dFnnhBzGUXiQkB6CPPEqOQlCEHZY1uKV9xAYf9zHw/exec";
+    // URL Web App Google Script Kamu
+    const API_URL = "https://script.google.com/macros/s/AKfycbzpmjBCV-wmn-tr3RGh3DJ35u1dFnnhBzGUXiQKb6CPPEqO1CEHZY1uKV9xAYf9zHw/exec";
 
     const scrollArea = document.getElementById('scrollableArea');
     let startY = 0;
 
     scrollArea.addEventListener('touchstart', function(e) {
-      if (e.touches.length === 1) startY = e.touches[0].clientY;
+      if (e.touches.length === 1) {
+        startY = e.touches[0].clientY;
+      }
     }, { passive: false });
 
     scrollArea.addEventListener('touchmove', function(e) {
       const currentY = e.touches[0].clientY;
       const distanceY = currentY - startY;
-      if (scrollArea.scrollTop <= 0 && distanceY > 0) e.preventDefault();
+
+      if (scrollArea.scrollTop <= 0 && distanceY > 0) {
+        e.preventDefault();
+      }
     }, { passive: false });
 
-    let DB = { headersUtama: [], dataUtama: [], mutaallimMap: {}, mualimMap: {}, tahfidzMap: {} };
+    let DB = {
+      headersUtama: [],
+      dataUtama: [],
+      mutaallimMap: {},
+      mualimMap: {},
+      tahfidzMap: {}
+    };
 
     window.onload = function() {
       const localData = localStorage.getItem('SANTRI_DB_CACHE');
@@ -95,8 +152,10 @@
     };
 
     function fetchDataFromServer(showLoadingUI) {
-      if(showLoadingUI) document.getElementById('loading').classList.remove('hidden');
-      
+      if (showLoadingUI) {
+        document.getElementById('loading').classList.remove('hidden');
+      }
+
       fetch(API_URL)
         .then(response => response.json())
         .then(res => {
@@ -104,7 +163,7 @@
           initDatabase(res, false);
         })
         .catch(err => {
-          if(showLoadingUI) {
+          if (showLoadingUI) {
             document.getElementById('loadingText').innerText = 'Gagal memuat: ' + err.message;
           }
         });
@@ -126,13 +185,18 @@
       document.getElementById('loading').classList.add('hidden');
       document.getElementById('searchInput').disabled = false;
       document.getElementById('searchBtn').disabled = false;
-      
-      if(isFromCache) document.getElementById('cacheBadge').classList.remove('hidden');
+
+      if (isFromCache) {
+        document.getElementById('cacheBadge').classList.remove('hidden');
+      }
     }
 
     function handleKeyPress(event) {
-      if (event.key === "Enter") lakukanPencarianFast(true);
-      else lakukanPencarianFast(false);
+      if (event.key === "Enter") {
+        lakukanPencarianFast(true);
+      } else {
+        lakukanPencarianFast(false);
+      }
     }
 
     function lakukanPencarianFast(isForce) {
@@ -140,16 +204,19 @@
       const keyword = inputEl.value.toLowerCase().trim();
       const container = document.getElementById('resultContainer');
       const infoMsg = document.getElementById('infoMessage');
-      
+
       container.innerHTML = '';
       infoMsg.innerHTML = '';
 
       if (!keyword) return;
-      if (!isForce && keyword.length < 3) return;
+
+      if (!isForce && keyword.length < 3) {
+        return;
+      }
 
       const hasil = DB.dataUtama.filter(row => {
-        const idPps = row[0] ? row[0].toLowerCase().trim() : "";
-        const nama = row[1] ? row[1].toLowerCase().trim() : ""; 
+        const idPps = row[0] ? row[0].toLowerCase().trim() : '';
+        const nama = row[1] ? row[1].toLowerCase().trim() : '';
         return idPps.includes(keyword) || nama.includes(keyword);
       });
 
@@ -164,14 +231,13 @@
       if (hasil.length > maxLimit) {
         infoMsg.innerHTML = `
           <div class="bg-amber-50 border border-amber-200 text-amber-800 text-xs p-3 rounded-lg">
-            Ditemukan <strong>${hasil.length}</strong> data. Menampilkan <strong>30 data pertama</strong> agar cepat. Ketik nama lebih spesifik jika belum muncul.
-          </div>
-        `;
+            Ditemukan <strong>${hasil.length}</strong> data. Menampilkan <strong>30 data pertama</strong> agar tidak lambat. Ketik nama lebih spesifik jika data belum terlihat.
+          </div>`;
       }
 
       displayHasil.forEach(row => {
-        const idPps = row[0] ? row[0].trim() : "";
-        const nama = row[1] ? row[1].trim() : "Tanpa Nama";
+        const idPps = row[0] ? row[0].trim() : '';
+        const nama = row[1] ? row[1].trim() : 'Tanpa Nama';
 
         const isMutaallim = DB.mutaallimMap.hasOwnProperty(idPps);
         const isMualim = DB.mualimMap.hasOwnProperty(idPps);
@@ -190,14 +256,13 @@
             <div class="bg-white p-2 rounded border border-gray-200">
               <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider">${header}</span>
               <span class="text-sm font-medium text-gray-800">${val}</span>
-            </div>
-          `;
+            </div>`;
         });
 
         let statusSectionsHtml = '';
-        if (isMutaallim) statusSectionsHtml += buildExtraCard("Data Muta'allim", DB.mutaallimMap[idPps], "border-amber-200 bg-amber-50/50 text-amber-800");
-        if (isMualim) statusSectionsHtml += buildExtraCard("Data Mu'allim", DB.mualimMap[idPps], "border-blue-200 bg-blue-50/50 text-blue-800");
-        if (isTahfidz) statusSectionsHtml += buildExtraCard("Data Tahfidz", DB.tahfidzMap[idPps], "border-emerald-200 bg-emerald-50/50 text-emerald-800");
+        if (isMutaallim) statusSectionsHtml += buildExtraCard("Detail Muta'allim", DB.mutaallimMap[idPps], 'bg-amber-50 border-amber-200 text-amber-900');
+        if (isMualim) statusSectionsHtml += buildExtraCard("Detail Mu'allim", DB.mualimMap[idPps], 'bg-blue-50 border-blue-200 text-blue-900');
+        if (isTahfidz) statusSectionsHtml += buildExtraCard("Detail Tahfidz", DB.tahfidzMap[idPps], 'bg-emerald-50 border-emerald-200 text-emerald-900');
 
         const card = `
           <div class="border border-gray-200 rounded-xl p-5 bg-gray-50 shadow-sm hover:shadow-md transition">
@@ -215,8 +280,16 @@
             </div>
 
             ${statusSectionsHtml}
-          </div>
-        `;
+
+            <!-- TOMBOL LIHAT FOTO SANTRI -->
+            <div class="mt-4 pt-3 border-t border-gray-200 flex justify-end">
+              <button onclick="openPhotoModal('${idPps}', '${nama.replace(/'/g, "\\'")}')" 
+                      class="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-4 py-2 rounded-lg border border-emerald-200 text-xs transition shadow-sm">
+                🖼️ Lihat Foto Santri
+              </button>
+            </div>
+          </div>`;
+
         container.innerHTML += card;
       });
     }
@@ -228,20 +301,78 @@
           <div class="bg-white p-2 rounded border border-gray-200">
             <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider">${key}</span>
             <span class="text-sm font-medium text-gray-800">${dataObj[key]}</span>
-          </div>
-        `;
+          </div>`;
       }
 
       return `
         <div class="mt-4 p-4 border rounded-lg ${colorClass}">
           <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-current"></span> ${title}
+            <span class="w-2 h-2 rounded-full bg-current"></span>${title}
           </h4>
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             ${items || '<span class="text-xs text-gray-400">Tidak ada rincian tambahan.</span>'}
           </div>
-        </div>
-      `;
+        </div>`;
+    }
+
+    // ==========================================
+    // FUNGSI POPUP / MODAL FOTO SANTRI (UNTUK GITHUB)
+    // ==========================================
+    function openPhotoModal(idPps, nama) {
+      document.getElementById('modalName').innerText = nama;
+      document.getElementById('modalPps').innerText = "ID PPS: " + (idPps || "-");
+      
+      const modal = document.getElementById('photoModal');
+      const img = document.getElementById('santriImg');
+      const loading = document.getElementById('photoLoading');
+      const errorDiv = document.getElementById('photoError');
+
+      // Reset State Modal
+      img.classList.add('hidden');
+      errorDiv.classList.add('hidden');
+      loading.classList.remove('hidden');
+      img.src = "";
+      
+      modal.classList.remove('hidden');
+
+      if (!idPps) {
+        showPhotoError("ID PPS tidak valid");
+        return;
+      }
+
+      // Memanggil fungsi pencarian foto melalui API Web App
+      fetch(API_URL + "?action=getPhoto&idPps=" + encodeURIComponent(idPps))
+        .then(res => res.json())
+        .then(res => {
+          if (res && res.success && res.photoUrl) {
+            img.src = res.photoUrl;
+          } else {
+            showPhotoError(res ? res.message : "Foto belum tersedia");
+          }
+        })
+        .catch(err => {
+          showPhotoError("Gagal memuat foto");
+        });
+    }
+
+    function onImageLoaded() {
+      document.getElementById('photoLoading').classList.add('hidden');
+      document.getElementById('santriImg').classList.remove('hidden');
+    }
+
+    function onImageError() {
+      showPhotoError("Gagal memuat file gambar");
+    }
+
+    function showPhotoError(msg) {
+      document.getElementById('photoLoading').classList.add('hidden');
+      document.getElementById('santriImg').classList.add('hidden');
+      document.getElementById('photoErrorMsg').innerText = msg;
+      document.getElementById('photoError').classList.remove('hidden');
+    }
+
+    function closePhotoModal() {
+      document.getElementById('photoModal').classList.add('hidden');
     }
   </script>
 </body>
