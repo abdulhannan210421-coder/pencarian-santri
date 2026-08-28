@@ -7,16 +7,15 @@
   <title>Pencarian Data Santri</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* KUNCI UTAMA ANTI PULL-TO-REFRESH */
+    /* ANTI PULL-TO-REFRESH */
     html, body {
       height: 100%;
       width: 100%;
-      overflow: hidden; /* Mencegah body utama dari scroll/bounce bawaan browser */
+      overflow: hidden;
       overscroll-behavior: none;
       touch-action: none;
     }
 
-    /* Container khusus untuk scroll yang terisolasi dari gesture browser */
     #scrollableArea {
       height: 100%;
       overflow-y: auto;
@@ -24,33 +23,48 @@
       overscroll-behavior-y: contain;
       touch-action: pan-y;
     }
+
+    /* ANIMASI BOUNCE UNTUK MODAL FOTO */
+    @keyframes bounceIn {
+      0% { opacity: 0; transform: scale(0.3); }
+      50% { opacity: 1; transform: scale(1.05); }
+      70% { transform: scale(0.9); }
+      100% { transform: scale(1); }
+    }
+    .animate-bounce-modal {
+      animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
   </style>
 </head>
-<body class="bg-slate-100">
-  <!-- Wrapper Khusus Scroll -->
+<body class="bg-slate-100 font-sans text-slate-800">
+  <!-- Wrapper Scroll -->
   <div id="scrollableArea" class="p-4 md:p-8">
-    <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6 my-2">
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-6 my-2 border border-slate-200">
+      
+      <!-- Top Action Bar -->
       <div class="flex justify-between items-center mb-4">
-        <span id="cacheBadge" class="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full hidden">Data Tersimpan (Siap Pakai)</span>
-        <button onclick="forceRefreshData()" class="text-xs text-gray-400 hover:text-emerald-600 underline ml-auto">
-          🔄 Update Data Terbaru
+        <span id="cacheBadge" class="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-semibold hidden">
+          ⚡ Data Tersimpan (Instan)
+        </span>
+        <button onclick="forceRefreshData()" class="text-xs text-slate-400 hover:text-emerald-600 transition flex items-center gap-1 ml-auto">
+          🔄 Sync Data
         </button>
       </div>
 
-      <h1 class="text-2xl md:text-3xl font-bold text-center text-emerald-700 mb-2">Pencarian Data Santri</h1>
-      <p class="text-center text-gray-500 mb-6 text-sm">Cari berdasarkan <strong>ID PPS</strong> atau <strong>Nama Santri</strong></p>
+      <!-- Title -->
+      <h1 class="text-2xl font-bold text-center text-emerald-700 tracking-tight">Pencarian Data Santri</h1>
+      <p class="text-center text-slate-400 mb-5 text-xs">Ketik minimal 3 karakter ID PPS atau Nama Santri</p>
 
-      <!-- Form Pencarian -->
+      <!-- Search Input -->
       <div class="flex gap-2 mb-2">
-        <input type="text" id="searchInput" placeholder="Ketik minimal 3 huruf atau ID PPS..." 
-               class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm disabled:bg-gray-100" 
+        <input type="text" id="searchInput" placeholder="Cari ID PPS atau Nama..." 
+               class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm disabled:bg-slate-50 text-sm" 
                onkeyup="handleKeyPress(event)" disabled>
         <button onclick="lakukanPencarianFast(true)" id="searchBtn" disabled
-                class="bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-700 transition shadow-sm disabled:opacity-50">
+                class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-emerald-700 transition shadow-sm disabled:opacity-50">
           Cari
         </button>
       </div>
-      <p class="text-xs text-gray-400 mb-6">*Pencarian otomatis berjalan jika mengetik minimal 3 karakter / ID lengkap.</p>
 
       <!-- Indicator Loading -->
       <div id="loading" class="text-center py-6 text-emerald-600 font-semibold flex items-center justify-center gap-2">
@@ -58,74 +72,64 @@
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <span id="loadingText">Memuat data santri...</span>
+        <span id="loadingText" class="text-xs">Memuat database...</span>
       </div>
 
-      <!-- Tempat Info Jumlah Hasil & List Data -->
-      <div id="infoMessage" class="mb-4"></div>
-      <div id="resultContainer" class="space-y-6"></div>
+      <!-- Result Container -->
+      <div id="infoMessage" class="mt-4"></div>
+      <div id="resultContainer" class="mt-3"></div>
     </div>
   </div>
 
-  <!-- MODAL POPUP FOTO SANTRI -->
-  <div id="photoModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl max-w-md w-full p-5 relative shadow-2xl overflow-hidden flex flex-col items-center">
+  <!-- MODAL POPUP FOTO SANTRI (BOUNCE) -->
+  <div id="photoModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div id="photoModalCard" class="bg-white rounded-2xl max-w-lg w-full p-4 relative shadow-2xl overflow-hidden flex flex-col items-center">
       <!-- Tombol Close -->
-      <button onclick="closePhotoModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center font-bold transition">
+      <button onclick="closePhotoModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center font-bold transition z-10">
         ✕
       </button>
 
-      <h3 id="modalName" class="text-lg font-bold text-gray-800 text-center pr-6 mb-1">Foto Santri</h3>
-      <p id="modalPps" class="text-xs text-gray-500 mb-4 text-center"></p>
+      <h3 id="modalName" class="text-base font-bold text-slate-800 text-center pr-6 mb-0.5">Foto Santri</h3>
+      <p id="modalPps" class="text-xs text-slate-400 mb-3 text-center"></p>
 
-      <!-- Container Gambar & Loading -->
-      <div class="w-full h-80 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative border border-slate-200 shadow-inner">
-        <!-- Spinner Loading Foto -->
+      <!-- Frame Foto Full -->
+      <div class="w-full h-96 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative border border-slate-200">
         <div id="photoLoading" class="flex flex-col items-center gap-2 text-emerald-600">
-          <svg class="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <svg class="animate-spin h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <span class="text-xs font-medium text-gray-500">Mencari foto terbaru...</span>
+          <span class="text-xs font-medium text-slate-500">Memuat foto...</span>
         </div>
 
-        <!-- Tag Image -->
-        <img id="santriImg" src="" alt="Foto Santri" class="w-full h-full object-cover hidden" onload="onImageLoaded()" onerror="onImageError()" referrerpolicy="no-referrer">
+        <img id="santriImg" src="" alt="Foto Santri Full" class="w-full h-full object-contain hidden" onload="onImageLoaded()" onerror="onImageError()" referrerpolicy="no-referrer">
         
-        <!-- Peringatan Jika Foto Tidak Ada -->
         <div id="photoError" class="hidden text-center p-4">
-          <p class="text-3xl mb-2">📷</p>
-          <p id="photoErrorMsg" class="text-sm font-semibold text-gray-600">Foto tidak ditemukan</p>
-          <p class="text-xs text-gray-400 mt-1">Belum ada foto yang diunggah untuk ID PPS ini.</p>
+          <p class="text-3xl mb-1">📷</p>
+          <p id="photoErrorMsg" class="text-xs font-semibold text-slate-600">Foto tidak ditemukan</p>
         </div>
       </div>
 
-      <button onclick="closePhotoModal()" class="mt-5 w-full bg-slate-200 hover:bg-slate-300 text-slate-700 py-2.5 rounded-xl font-medium transition text-sm">
+      <button onclick="closePhotoModal()" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-2 rounded-xl font-medium transition text-xs">
         Tutup
       </button>
     </div>
   </div>
 
   <script>
-    // URL Web App Google Script Kamu
     const API_URL = "https://script.google.com/macros/s/AKfycbzV_l5rAXgnapi2c3ZH90WOusrHgN-Ny9wjaFJ9tczCl1mkz1pURw_sZUYhEF4YY6byRg/exec";
 
     const scrollArea = document.getElementById('scrollableArea');
     let startY = 0;
 
     scrollArea.addEventListener('touchstart', function(e) {
-      if (e.touches.length === 1) {
-        startY = e.touches[0].clientY;
-      }
+      if (e.touches.length === 1) startY = e.touches[0].clientY;
     }, { passive: false });
 
     scrollArea.addEventListener('touchmove', function(e) {
       const currentY = e.touches[0].clientY;
       const distanceY = currentY - startY;
-
-      if (scrollArea.scrollTop <= 0 && distanceY > 0) {
-        e.preventDefault();
-      }
+      if (scrollArea.scrollTop <= 0 && distanceY > 0) e.preventDefault();
     }, { passive: false });
 
     let DB = {
@@ -139,21 +143,19 @@
     window.onload = function() {
       const localData = localStorage.getItem('SANTRI_DB_CACHE');
       if (localData) {
-          try {
-              const parsed = JSON.parse(localData);
-              initDatabase(parsed, true);
-              return; // Cukup sampai sini saja, data langsung dimuat instan!
-          } catch(e) {
-              localStorage.removeItem('SANTRI_DB_CACHE');
-          }
+        try {
+          const parsed = JSON.parse(localData);
+          initDatabase(parsed, true);
+          return;
+        } catch(e) {
+          localStorage.removeItem('SANTRI_DB_CACHE');
+        }
       }
       fetchDataFromServer(true);
     };
 
     function fetchDataFromServer(showLoadingUI) {
-      if (showLoadingUI) {
-        document.getElementById('loading').classList.remove('hidden');
-      }
+      if (showLoadingUI) document.getElementById('loading').classList.remove('hidden');
 
       fetch(API_URL)
         .then(response => response.json())
@@ -163,7 +165,7 @@
         })
         .catch(err => {
           if (showLoadingUI) {
-            document.getElementById('loadingText').innerText = 'Gagal memuat: ' + err.message;
+            document.getElementById('loadingText').innerText = 'Gagal memuat data: ' + err.message;
           }
         });
     }
@@ -185,31 +187,22 @@
       document.getElementById('searchInput').disabled = false;
       document.getElementById('searchBtn').disabled = false;
 
-      if (isFromCache) {
-        document.getElementById('cacheBadge').classList.remove('hidden');
-      }
+      if (isFromCache) document.getElementById('cacheBadge').classList.remove('hidden');
     }
 
-    // ==========================================
-    // VARIABEL GLOBAL UNTUK PENCARIAN & PAGINATION
-    // ==========================================
     let searchTimeout = null;
     let searchResults = [];
     let currentCardIndex = 0;
 
-    // 1. FITUR DEBOUNCE (Menunda pencarian sampai user selesai mengetik)
     function handleKeyPress(event) {
       clearTimeout(searchTimeout);
       if (event.key === "Enter") {
         lakukanPencarianFast(true);
       } else {
-        searchTimeout = setTimeout(() => {
-          lakukanPencarianFast(false);
-        }, 300); // Tunggu 300ms, baru proses data
+        searchTimeout = setTimeout(() => lakukanPencarianFast(false), 300);
       }
     }
 
-    // 2. FITUR JOB PARALEL / ASYNC PROCESSING
     function lakukanPencarianFast(isForce) {
       const inputEl = document.getElementById('searchInput');
       const keyword = inputEl.value.toLowerCase().trim();
@@ -222,15 +215,10 @@
       currentCardIndex = 0;
 
       if (!keyword) return;
+      if (!isForce && keyword.length < 3) return;
 
-      if (!isForce && keyword.length < 3) {
-        return;
-      }
+      container.innerHTML = `<div class="text-center text-emerald-600 py-6 text-xs font-medium animate-pulse">Memproses data...</div>`;
 
-      // Tampilkan indikator selagi data diproses di latar belakang
-      container.innerHTML = `<div class="text-center text-emerald-600 py-6 text-sm font-semibold animate-pulse">Memproses data...</div>`;
-
-      // Lempar pemrosesan ke antrean berikutnya agar layar tidak freeze
       setTimeout(() => {
         searchResults = DB.dataUtama.filter(row => {
           const idPps = row[0] ? row[0].toLowerCase().trim() : '';
@@ -239,16 +227,17 @@
         });
 
         if (searchResults.length === 0) {
-          container.innerHTML = `<div class="text-center text-gray-500 py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">Data santri tidak ditemukan.</div>`;
+          container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-xl">Data santri tidak ditemukan.</div>`;
           return;
         }
 
-        // Jika ketemu, langsung render kartu pada halaman pertama
         renderCurrentCard();
       }, 10);
     }
 
-    // 3. FITUR PAGINATION (Model ID Card)
+    // ==========================================
+    // RENDER KARTU NAMA MINIMALIS
+    // ==========================================
     function renderCurrentCard() {
       const container = document.getElementById('resultContainer');
       const infoMsg = document.getElementById('infoMessage');
@@ -258,11 +247,11 @@
       const row = searchResults[currentCardIndex];
       const total = searchResults.length;
 
-      // Header Navigasi Info
+      // Indicator Jumlah Hasil
       infoMsg.innerHTML = `
-        <div class="flex justify-between items-center bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm p-3 rounded-lg mb-2 shadow-sm">
-          <span class="font-semibold">Ditemukan ${total} Santri</span>
-          <span class="bg-emerald-200 text-emerald-900 px-3 py-1 rounded-full text-xs font-bold shadow-inner">
+        <div class="flex justify-between items-center text-xs text-slate-500 mb-3 px-1">
+          <span>Ditemukan <strong>${total}</strong> data</span>
+          <span class="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold border border-emerald-200">
              Kartu ${currentCardIndex + 1} dari ${total}
           </span>
         </div>`;
@@ -270,71 +259,102 @@
       const idPps = row[0] ? row[0].trim() : '';
       const nama = row[1] ? row[1].trim() : 'Tanpa Nama';
 
+      // Ambil Kontak
       const indexKontak = DB.headersUtama.findIndex(header => header.toUpperCase() === "KONTAK WALI");
       let infoKontakWali = (indexKontak !== -1) ? row[indexKontak] : "";
 
+      // Ambil Link Foto
+      const fotoIndex = DB.headersUtama.findIndex(header => header.toUpperCase() === "FOTO");
+      let rawFotoUrl = (fotoIndex !== -1 && row[fotoIndex]) ? row[fotoIndex] : "";
+      let safeFotoUrl = getSafeImageUrl(rawFotoUrl);
+
+      // Status Badges
       const isMutaallim = DB.mutaallimMap.hasOwnProperty(idPps);
       const isMualim = DB.mualimMap.hasOwnProperty(idPps);
       const isTahfidz = DB.tahfidzMap.hasOwnProperty(idPps);
 
       let statusBadges = [];
-      if (isMutaallim) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-amber-100 text-amber-800 border-amber-300">Muta'allim</span>`);
-      if (isMualim) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-blue-100 text-blue-800 border-blue-300">Mu'allim</span>`);
-      if (isTahfidz) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-emerald-100 text-emerald-800 border-emerald-300">Tahfidz</span>`);
-      if (statusBadges.length === 0) statusBadges.push(`<span class="px-3 py-1 text-xs font-bold rounded-full border bg-gray-100 text-gray-800 border-gray-300">Santri Regular</span>`);
+      if (isMutaallim) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200">Muta'allim</span>`);
+      if (isMualim) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-200">Mu'allim</span>`);
+      if (isTahfidz) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">Tahfidz</span>`);
+      if (statusBadges.length === 0) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-600 border border-slate-200">Santri Regular</span>`);
 
+      // List Data Utama (Tanpa Box Kaku)
       let detailUtamaHtml = '';
       DB.headersUtama.forEach((header, idx) => {
         let namaHeader = header.toUpperCase();
-        if (namaHeader === "FOTO" || namaHeader === "KONTAK WALI" || namaHeader === "WA") return;
+        if (namaHeader === "FOTO" || namaHeader === "KONTAK WALI" || namaHeader === "WA" || idx === 0 || idx === 1) return;
 
         let val = (row[idx] !== "" && row[idx] !== null && row[idx] !== undefined) ? row[idx] : "-";
         detailUtamaHtml += `
-        <div class="bg-white p-2 rounded border border-gray-200">
-            <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider">${header}</span>
-            <span class="text-sm font-medium text-gray-800">${val}</span>
-        </div>`;
+          <div class="py-1.5 border-b border-slate-100 flex justify-between items-center text-xs">
+            <span class="text-slate-400 font-medium">${header}</span>
+            <span class="text-slate-700 font-semibold text-right">${val}</span>
+          </div>`;
       });
-      
-      let statusSectionsHtml = '';
-      if (isMutaallim) statusSectionsHtml += buildExtraCard("Detail Muta'allim", DB.mutaallimMap[idPps], 'bg-amber-50 border-amber-200 text-amber-900');
-      if (isMualim) statusSectionsHtml += buildExtraCard("Detail Mu'allim", DB.mualimMap[idPps], 'bg-blue-50 border-blue-200 text-blue-900');
-      if (isTahfidz) statusSectionsHtml += buildExtraCard("Detail Tahfidz", DB.tahfidzMap[idPps], 'bg-emerald-50 border-emerald-200 text-emerald-900');
 
-      // Tombol Navigasi Pagination
+      // Extra Status Sections
+      let statusSectionsHtml = '';
+      if (isMutaallim) statusSectionsHtml += buildExtraCardMinimal("Muta'allim", DB.mutaallimMap[idPps], 'bg-amber-50/60 border-amber-100 text-amber-900');
+      if (isMualim) statusSectionsHtml += buildExtraCardMinimal("Mu'allim", DB.mualimMap[idPps], 'bg-blue-50/60 border-blue-100 text-blue-900');
+      if (isTahfidz) statusSectionsHtml += buildExtraCardMinimal("Tahfidz", DB.tahfidzMap[idPps], 'bg-emerald-50/60 border-emerald-100 text-emerald-900');
+
+      // Tombol Navigasi
       let navButtons = `
-        <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
-          <button onclick="prevCard()" ${currentCardIndex === 0 ? 'disabled class="px-4 py-2.5 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm font-bold"' : 'class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition text-sm font-bold shadow-md"'}>
-            &laquo; Sebelumnya
+        <div class="flex justify-between items-center mt-5 pt-3 border-t border-slate-100">
+          <button onclick="prevCard()" ${currentCardIndex === 0 ? 'disabled class="px-3.5 py-1.5 bg-slate-100 text-slate-300 rounded-lg text-xs font-semibold cursor-not-allowed"' : 'class="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition text-xs font-semibold shadow-sm"'}>
+            &laquo; Sblm
           </button>
           
-          <button onclick="nextCard()" ${currentCardIndex === total - 1 ? 'disabled class="px-4 py-2.5 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm font-bold"' : 'class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition text-sm font-bold shadow-md"'}>
-            Selanjutnya &raquo;
+          <button onclick="nextCard()" ${currentCardIndex === total - 1 ? 'disabled class="px-3.5 py-1.5 bg-slate-100 text-slate-300 rounded-lg text-xs font-semibold cursor-not-allowed"' : 'class="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition text-xs font-semibold shadow-sm"'}>
+            Lanjut &raquo;
           </button>
         </div>`;
 
+      // KARTU NAMA MINIMALIS TEMPLATE
       const card = `
-      <div class="border border-gray-200 rounded-xl p-5 bg-gray-50 shadow-md transition transform">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-4 pb-3 border-b border-gray-200">
-          <div>
-            <span class="text-xs font-semibold text-emerald-600 uppercase tracking-wide">ID PPS: ${idPps || '-'}</span>
-            <h2 class="text-xl font-bold text-gray-800">${nama}</h2>
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-5 transition-all">
+        
+        <!-- ID Card Header (Foto Thumbnail + Nama + ID) -->
+        <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+          <!-- Thumbnail Foto -->
+          <div class="relative group cursor-pointer flex-shrink-0" onclick="openPhotoModal('${idPps}', '${nama.replace(/'/g, "\'")}')">
+            ${safeFotoUrl ? `
+              <img src="${safeFotoUrl}" alt="Thumbnail Santri" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm hover:scale-105 transition-transform">
+            ` : `
+              <div class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xl border-2 border-emerald-200">
+                ${nama.charAt(0).toUpperCase()}
+              </div>
+            `}
+            <div class="absolute inset-0 bg-slate-900/30 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
+               🔎 Zoom
+            </div>
           </div>
-          <div class="flex flex-wrap gap-1">${statusBadges.join(' ')}</div>
+
+          <!-- Info Dasar -->
+          <div class="flex-grow min-w-0">
+            <span class="text-[10px] font-bold tracking-wider text-emerald-600 uppercase">ID PPS: ${idPps || '-'}</span>
+            <h2 class="text-lg font-bold text-slate-800 truncate leading-snug">${nama}</h2>
+            <div class="flex flex-wrap gap-1 mt-1">${statusBadges.join(' ')}</div>
+          </div>
         </div>
 
-        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Informasi Utama Santri</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+        <!-- Detail Data Santri -->
+        <div class="mt-3">
           ${detailUtamaHtml}
         </div>
 
         ${statusSectionsHtml}
 
-        <div class="mt-4 pt-3 border-t border-gray-200 flex flex-wrap items-center justify-between gap-2">
-          <div>${buatTombolWA(infoKontakWali)}</div>
-          <button onclick="openPhotoModal('${idPps}', '${nama.replace(/'/g, "\\'")}')"
-              class="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-4 py-2 rounded-lg border border-emerald-200 text-xs transition shadow-sm">
-              🖼️ Lihat Foto Santri
+        <!-- Footer Kartu Nama (Ikon WA & Action) -->
+        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] text-slate-400 font-medium mr-1">Hubungi:</span>
+            ${buatTombolWA(infoKontakWali)}
+          </div>
+          <button onclick="openPhotoModal('${idPps}', '${nama.replace(/'/g, "\'")}')" 
+                  class="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold underline">
+            Lihat Foto &raquo;
           </button>
         </div>
 
@@ -357,60 +377,55 @@
         renderCurrentCard();
       }
     }
-    function buildExtraCard(title, dataObj, colorClass) {
+
+    function buildExtraCardMinimal(title, dataObj, colorClass) {
       let items = '';
       for (let key in dataObj) {
         items += `
-          <div class="bg-white p-2 rounded border border-gray-200">
-            <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider">${key}</span>
-            <span class="text-sm font-medium text-gray-800">${dataObj[key]}</span>
+          <div class="py-1 flex justify-between text-[11px]">
+            <span class="opacity-70">${key}:</span>
+            <span class="font-semibold">${dataObj[key]}</span>
           </div>`;
       }
 
       return `
-        <div class="mt-4 p-4 border rounded-lg ${colorClass}">
-          <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-current"></span>${title}
+        <div class="mt-3 p-3 rounded-xl border ${colorClass}">
+          <h4 class="font-bold text-xs mb-1 flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>Rincian ${title}
           </h4>
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            ${items || '<span class="text-xs text-gray-400">Tidak ada rincian tambahan.</span>'}
+          <div class="divide-y divide-black/5">
+            ${items || '<span class="text-[10px] opacity-60">Tidak ada rincian.</span>'}
           </div>
         </div>`;
     }
-// Fungsi untuk mengubah link Drive biasa menjadi link gambar yang aman (bebas CORS)
-function getSafeImageUrl(rawUrl) {
-  if (!rawUrl) return "";
-  let url = rawUrl.trim();
 
-  let fileId = "";
+    // Google Drive Safe Thumbnail API Generator
+    function getSafeImageUrl(rawUrl) {
+      if (!rawUrl) return "";
+      let url = rawUrl.trim();
+      let fileId = "";
 
-  // Deteksi ID dari format lh3.googleusercontent.com/d/ID
-  let match1 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (match1) fileId = match1[1];
+      let match1 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match1) fileId = match1[1];
 
-  // Deteksi ID dari format drive.google.com/file/d/ID/view
-  let match2 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (!fileId && match2) fileId = match2[1];
+      let match2 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (!fileId && match2) fileId = match2[1];
 
-  // Deteksi ID dari format drive.google.com/open?id=ID
-  let match3 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (!fileId && match3) fileId = match3[1];
+      let match3 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (!fileId && match3) fileId = match3[1];
 
-  if (fileId) {
-    // Ubah ke format Thumbnail API milik Google (Sangat stabil untuk website eksternal)
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
-  }
+      if (fileId) {
+        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+      }
+      return url;
+    }
 
-  // Jika bukan link Google Drive, kembalikan url aslinya
-  return url;
-}
-    // Fungsi untuk memproses dan membuat tombol WhatsApp
+    // MEMBUAT TOMBOL IKON WA SAJA (SUPPORT 1 ATAU 2 NOMOR TERPISAH)
     function buatTombolWA(kolomKontak) {
       if (!kolomKontak || kolomKontak.trim() === "") {
-        return `<span class="text-gray-400 text-sm">Tidak ada data kontak</span>`;
+        return `<span class="text-slate-300 text-xs">-</span>`;
       }
 
-      // PERBAIKAN: Pisahkan nomor berdasarkan koma (,) ATAU titik koma (;)
       let nomorArray = kolomKontak.split(/[;,]+/);
       let kumpulanTombol = '';
 
@@ -424,33 +439,41 @@ function getSafeImageUrl(rawUrl) {
         if (nomorBersih.length > 7) {
           kumpulanTombol += `
             <a href="https://wa.me/${nomorBersih}" target="_blank" rel="noopener noreferrer" 
-               class="inline-flex items-center justify-center px-3 py-1.5 bg-green-500 text-white rounded-md text-sm font-semibold shadow-sm hover:bg-green-600 mr-2 mb-2 transition-all">
-               💬 WA: ${nomorBersih}
+               title="Hubungi WhatsApp (${nomorBersih})"
+               class="w-8 h-8 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow transition-transform hover:scale-110 active:scale-95">
+               <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                 <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+               </svg>
             </a>
           `;
         }
       });
 
-      return kumpulanTombol;
+      return kumpulanTombol || `<span class="text-slate-300 text-xs">-</span>`;
     }
-    // ==========================================
-    // FUNGSI POPUP / MODAL FOTO SANTRI (UNTUK GITHUB)
-    // ==========================================
+
+    // OPEN PHOTO MODAL DENGAN BOUNCE ANIMATION
     function openPhotoModal(idPps, nama) {
       document.getElementById('modalName').innerText = nama;
       document.getElementById('modalPps').innerText = "ID PPS: " + (idPps || "-");
       
       const modal = document.getElementById('photoModal');
+      const modalCard = document.getElementById('photoModalCard');
       const img = document.getElementById('santriImg');
       const loading = document.getElementById('photoLoading');
       const errorDiv = document.getElementById('photoError');
 
-      // Reset State Modal
+      // Reset Modal State
       img.classList.add('hidden');
       errorDiv.classList.add('hidden');
       loading.classList.remove('hidden');
       img.src = "";
       
+      // Tambahkan efek bounce animation
+      modalCard.classList.remove('animate-bounce-modal');
+      void modalCard.offsetWidth; // trigger reflow
+      modalCard.classList.add('animate-bounce-modal');
+
       modal.classList.remove('hidden');
 
       if (!idPps) {
@@ -458,30 +481,24 @@ function getSafeImageUrl(rawUrl) {
         return;
       }
 
-      // PERBAIKAN: Gunakan DB.dataUtama, bukan dataUtama
       const santriPilih = DB.dataUtama.find(row => row[0] == idPps); 
-      
-      // Cari index kolom FOTO otomatis dari headersUtama (jaga-jaga posisinya bergeser di Sheet)
       const fotoIndex = DB.headersUtama.findIndex(header => header.toUpperCase() === "FOTO");
 
-      loading.classList.add('hidden');
-
-// Cek apakah santri ketemu, dan kolom foto tidak kosong
       if (santriPilih && fotoIndex !== -1 && santriPilih[fotoIndex] && santriPilih[fotoIndex] !== "") {
-          // Panggil fungsi getSafeImageUrl di sini
-          const safeUrl = getSafeImageUrl(santriPilih[fotoIndex]);
-          img.src = safeUrl;
+        const safeUrl = getSafeImageUrl(santriPilih[fotoIndex]);
+        img.src = safeUrl;
       } else {
-          showPhotoError("Foto belum tersedia di database.");
+        showPhotoError("Foto belum tersedia di database.");
       }
-    } // <--- penutup fungsi openPhotoModal
+    }
+
     function onImageLoaded() {
       document.getElementById('photoLoading').classList.add('hidden');
       document.getElementById('santriImg').classList.remove('hidden');
     }
 
     function onImageError() {
-      showPhotoError("Gagal memuat file gambar");
+      showPhotoError("Gagal memuat file foto.");
     }
 
     function showPhotoError(msg) {
