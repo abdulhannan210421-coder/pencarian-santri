@@ -34,6 +34,33 @@
     .animate-bounce-modal {
       animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
+  
+    /* ANIMASI FLIP CARD */
+    .card-perspective {
+      perspective: 1000px;
+    }
+    .card-flip-container {
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+    }
+    .flip-out-left {
+      transform: rotateY(-70deg) scale(0.92);
+      opacity: 0;
+    }
+    .flip-in-left {
+      transform: rotateY(70deg) scale(0.92);
+      opacity: 0;
+    }
+    .flip-out-right {
+      transform: rotateY(70deg) scale(0.92);
+      opacity: 0;
+    }
+    .flip-in-right {
+      transform: rotateY(-70deg) scale(0.92);
+      opacity: 0;
+    }
+    
   </style>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800">
@@ -90,7 +117,8 @@
       </button>
 
       <h3 id="modalName" class="text-base font-bold text-slate-800 text-center pr-6 mb-0.5">Foto Santri</h3>
-      <p id="modalPps" class="text-xs text-slate-400 mb-3 text-center"></p>
+      <p id="modalPps" class="text-xs text-slate-400 text-center"></p>
+      <p id="modalDomisili" class="text-xs text-emerald-600 font-medium mb-3 text-center"></p>
 
       <!-- Frame Foto Full -->
       <div class="w-full h-96 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative border border-slate-200">
@@ -299,82 +327,173 @@
       if (isMualim) statusSectionsHtml += buildExtraCardMinimal("Mu'allim", DB.mualimMap[idPps], 'bg-blue-50/60 border-blue-100 text-blue-900');
       if (isTahfidz) statusSectionsHtml += buildExtraCardMinimal("Tahfidz", DB.tahfidzMap[idPps], 'bg-emerald-50/60 border-emerald-100 text-emerald-900');
 
-      // Tombol Navigasi
-      let navButtons = `
-        <div class="flex justify-between items-center mt-5 pt-3 border-t border-slate-100">
-          <button onclick="prevCard()" ${currentCardIndex === 0 ? 'disabled class="px-3.5 py-1.5 bg-slate-100 text-slate-300 rounded-lg text-xs font-semibold cursor-not-allowed"' : 'class="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition text-xs font-semibold shadow-sm"'}>
-            &laquo; Sblm
-          </button>
-          
-          <button onclick="nextCard()" ${currentCardIndex === total - 1 ? 'disabled class="px-3.5 py-1.5 bg-slate-100 text-slate-300 rounded-lg text-xs font-semibold cursor-not-allowed"' : 'class="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition text-xs font-semibold shadow-sm"'}>
-            Lanjut &raquo;
-          </button>
-        </div>`;
+      // Hint navigasi usap/ketuk
+      const navHint = total > 1 ? `<div class="text-[10px] text-slate-400 text-center mt-3 pt-2 border-t border-slate-100 flex items-center justify-center gap-1"><span>👈 Usap / ketuk tepi kartu untuk berpindah 👉</span></div>` : '';
 
       // KARTU NAMA MINIMALIS TEMPLATE
       const card = `
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-5 transition-all">
-        
-        <!-- ID Card Header (Foto Thumbnail + Nama + ID) -->
-        <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
-          <!-- Thumbnail Foto -->
-          <div class="relative group cursor-pointer flex-shrink-0" onclick="openPhotoModal('${idPps}', '${nama.replace(/'/g, "\'")}')">
-            ${safeFotoUrl ? `
-              <img src="${safeFotoUrl}" alt="Thumbnail Santri" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm hover:scale-105 transition-transform">
-            ` : `
-              <div class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xl border-2 border-emerald-200">
-                ${nama.charAt(0).toUpperCase()}
+      <div class="card-perspective relative select-none">
+        <div id="cardFlipWrapper" 
+             class="card-flip-container bg-white rounded-2xl border border-slate-200 shadow-md p-5 cursor-pointer"
+             ontouchstart="handleCardTouchStart(event)" 
+             ontouchmove="handleCardTouchMove(event)" 
+             ontouchend="handleCardTouchEnd(event)" 
+             onclick="handleCardClick(event)">
+          
+          <!-- ID Card Header (Foto Thumbnail + Nama + ID) -->
+          <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+            <!-- Thumbnail Foto -->
+            <div class="relative group cursor-pointer flex-shrink-0" onclick="openPhotoModal()">
+              ${safeFotoUrl ? `
+                <img src="${safeFotoUrl}" alt="Thumbnail Santri" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm hover:scale-105 transition-transform">
+              ` : `
+                <div class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xl border-2 border-emerald-200">
+                  ${nama.charAt(0).toUpperCase()}
+                </div>
+              `}
+              <div class="absolute inset-0 bg-slate-900/30 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
+                 🔎 Zoom
               </div>
-            `}
-            <div class="absolute inset-0 bg-slate-900/30 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
-               🔎 Zoom
+            </div>
+
+            <!-- Info Dasar -->
+            <div class="flex-grow min-w-0">
+              <span class="text-[10px] font-bold tracking-wider text-emerald-600 uppercase">ID PPS: ${idPps || '-'}</span>
+              <h2 class="text-lg font-bold text-slate-800 truncate leading-snug">${nama}</h2>
+              <div class="flex flex-wrap gap-1 mt-1">${statusBadges.join(' ')}</div>
             </div>
           </div>
 
-          <!-- Info Dasar -->
-          <div class="flex-grow min-w-0">
-            <span class="text-[10px] font-bold tracking-wider text-emerald-600 uppercase">ID PPS: ${idPps || '-'}</span>
-            <h2 class="text-lg font-bold text-slate-800 truncate leading-snug">${nama}</h2>
-            <div class="flex flex-wrap gap-1 mt-1">${statusBadges.join(' ')}</div>
+          <!-- Detail Data Santri -->
+          <div class="mt-3">
+            ${detailUtamaHtml}
           </div>
-        </div>
 
-        <!-- Detail Data Santri -->
-        <div class="mt-3">
-          ${detailUtamaHtml}
-        </div>
+          ${statusSectionsHtml}
 
-        ${statusSectionsHtml}
-
-        <!-- Footer Kartu Nama (Ikon WA & Action) -->
-        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-[11px] text-slate-400 font-medium mr-1">Hubungi:</span>
-            ${buatTombolWA(infoKontakWali)}
+          <!-- Footer Kartu Nama (Ikon WA & Action) -->
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] text-slate-400 font-medium mr-1">Hubungi:</span>
+              ${buatTombolWA(infoKontakWali)}
+            </div>
+            <button onclick="openPhotoModal()" 
+                    class="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold underline">
+              Lihat Foto &raquo;
+            </button>
           </div>
-          <button onclick="openPhotoModal('${idPps}', '${nama.replace(/'/g, "\'")}')" 
-                  class="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold underline">
-            Lihat Foto &raquo;
-          </button>
-        </div>
 
-        ${total > 1 ? navButtons : ''}
+          ${navHint}
+        </div>
       </div>`;
       
       container.innerHTML = card;
     }
 
-    function nextCard() {
-      if (currentCardIndex < searchResults.length - 1) {
-        currentCardIndex++;
+    let isCardAnimating = false;
+    let cardStartX = 0;
+    let cardStartY = 0;
+    let cardDeltaX = 0;
+
+    function changeCard(dir) {
+      if (isCardAnimating) return;
+      const newIndex = currentCardIndex + dir;
+      if (newIndex < 0 || newIndex >= searchResults.length) return;
+
+      const wrapper = document.getElementById('cardFlipWrapper');
+      if (!wrapper) {
+        currentCardIndex = newIndex;
         renderCurrentCard();
+        return;
       }
+
+      isCardAnimating = true;
+      const outClass = dir > 0 ? 'flip-out-left' : 'flip-out-right';
+      const inClass = dir > 0 ? 'flip-in-right' : 'flip-in-left';
+
+      wrapper.classList.add(outClass);
+
+      setTimeout(() => {
+        currentCardIndex = newIndex;
+        renderCurrentCard();
+        const newWrapper = document.getElementById('cardFlipWrapper');
+        if (newWrapper) {
+          newWrapper.classList.add(inClass);
+          setTimeout(() => {
+            newWrapper.classList.remove(inClass);
+            isCardAnimating = false;
+          }, 250);
+        } else {
+          isCardAnimating = false;
+        }
+      }, 150);
+    }
+
+    function nextCard() {
+      changeCard(1);
     }
 
     function prevCard() {
-      if (currentCardIndex > 0) {
-        currentCardIndex--;
-        renderCurrentCard();
+      changeCard(-1);
+    }
+
+    function handleCardTouchStart(e) {
+      if (e.touches.length === 1) {
+        cardStartX = e.touches[0].clientX;
+        cardStartY = e.touches[0].clientY;
+        cardDeltaX = 0;
+        const wrapper = document.getElementById('cardFlipWrapper');
+        if (wrapper) wrapper.style.transition = 'none';
+      }
+    }
+
+    function handleCardTouchMove(e) {
+      if (!cardStartX) return;
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      const diffX = currentX - cardStartX;
+      const diffY = currentY - cardStartY;
+
+      // Gerakan rotasi miring mengikuti sentuhan layar secara horizontal
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        cardDeltaX = diffX;
+        const wrapper = document.getElementById('cardFlipWrapper');
+        if (wrapper) {
+          const rotateY = Math.min(Math.max((cardDeltaX / wrapper.clientWidth) * 50, -50), 50);
+          wrapper.style.transform = `rotateY(${rotateY}deg)`;
+        }
+      }
+    }
+
+    function handleCardTouchEnd(e) {
+      const wrapper = document.getElementById('cardFlipWrapper');
+      if (wrapper) {
+        wrapper.style.transition = '';
+        wrapper.style.transform = '';
+      }
+
+      if (Math.abs(cardDeltaX) > 40) {
+        if (cardDeltaX < 0) {
+          nextCard();
+        } else {
+          prevCard();
+        }
+      }
+      cardStartX = 0;
+      cardStartY = 0;
+      cardDeltaX = 0;
+    }
+
+    function handleCardClick(e) {
+      // Abaikan jika yang diklik adalah tombol/ikon interaktif (WA, Zoom, dll)
+      if (e.target.closest('button, a, input, .group')) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      if (clickX > rect.width / 2) {
+        nextCard();
+      } else {
+        prevCard();
       }
     }
 
@@ -453,10 +572,20 @@
     }
 
     // OPEN PHOTO MODAL DENGAN BOUNCE ANIMATION
-    function openPhotoModal(idPps, nama) {
+    function openPhotoModal() {
+      if (searchResults.length === 0 || !searchResults[currentCardIndex]) return;
+      const santriPilih = searchResults[currentCardIndex];
+      const idPps = santriPilih[0] ? santriPilih[0].trim() : '-';
+      const nama = santriPilih[1] ? santriPilih[1].trim() : 'Tanpa Nama';
+
+      // Ambil data Domisili (bukan Status Domisili)
+      const domisiliIndex = DB.headersUtama.findIndex(header => header.trim().toUpperCase() === "DOMISILI");
+      let domisiliVal = (domisiliIndex !== -1 && santriPilih[domisiliIndex]) ? santriPilih[domisiliIndex] : "";
+
       document.getElementById('modalName').innerText = nama;
-      document.getElementById('modalPps').innerText = "ID PPS: " + (idPps || "-");
-      
+      document.getElementById('modalPps').innerText = "ID PPS: " + idPps;
+      document.getElementById('modalDomisili').innerText = domisiliVal ? "Domisili: " + domisiliVal : "";
+
       const modal = document.getElementById('photoModal');
       const modalCard = document.getElementById('photoModalCard');
       const img = document.getElementById('santriImg');
@@ -476,15 +605,9 @@
 
       modal.classList.remove('hidden');
 
-      if (!idPps) {
-        showPhotoError("ID PPS tidak valid");
-        return;
-      }
-
-      const santriPilih = DB.dataUtama.find(row => row[0] == idPps); 
       const fotoIndex = DB.headersUtama.findIndex(header => header.toUpperCase() === "FOTO");
 
-      if (santriPilih && fotoIndex !== -1 && santriPilih[fotoIndex] && santriPilih[fotoIndex] !== "") {
+      if (fotoIndex !== -1 && santriPilih[fotoIndex] && santriPilih[fotoIndex] !== "") {
         const safeUrl = getSafeImageUrl(santriPilih[fotoIndex]);
         img.src = safeUrl;
       } else {
