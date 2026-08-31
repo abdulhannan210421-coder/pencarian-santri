@@ -24,17 +24,26 @@
       touch-action: pan-y;
     }
 
-    /* ANIMASI BOUNCE UNTUK MODAL FOTO */
+    /* ANIMASI BOUNCE UNTUK TABEL MODAL */
     @keyframes bounceIn {
       0% { opacity: 0; transform: scale(0.3); }
-      50% { opacity: 1; transform: scale(1.05); }
-      70% { transform: scale(0.9); }
-      100% { transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.03); }
+      70% { transform: scale(0.97); }
+      100% { opacity: 1; transform: scale(1); }
     }
     .animate-bounce-modal {
       animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
-  
+
+    /* ANIMASI POP-UP EFEK IOS SLIDE/SCALE */
+    @keyframes iosPop {
+      0% { opacity: 0; transform: scale(0.88) translateY(20px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-ios-modal {
+      animation: iosPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
     /* ANIMASI FLIP CARD */
     .card-perspective {
       perspective: 1000px;
@@ -44,27 +53,32 @@
       transform-style: preserve-3d;
       backface-visibility: hidden;
     }
-    .flip-out-left {
-      transform: rotateY(-70deg) scale(0.92);
-      opacity: 0;
-    }
-    .flip-in-left {
-      transform: rotateY(70deg) scale(0.92);
-      opacity: 0;
-    }
-    .flip-out-right {
-      transform: rotateY(70deg) scale(0.92);
-      opacity: 0;
-    }
-    .flip-in-right {
-      transform: rotateY(-70deg) scale(0.92);
-      opacity: 0;
-    }
-    
+    .flip-out-left { transform: rotateY(-70deg) scale(0.92); opacity: 0; }
+    .flip-in-left { transform: rotateY(70deg) scale(0.92); opacity: 0; }
+    .flip-out-right { transform: rotateY(70deg) scale(0.92); opacity: 0; }
+    .flip-in-right { transform: rotateY(-70deg) scale(0.92); opacity: 0; }
   </style>
 </head>
-<body class="bg-slate-100 font-sans text-slate-800">
-  <!-- Wrapper Scroll -->
+<body class="bg-slate-100 font-sans text-slate-800 relative">
+
+  <!-- NOTIFIKASI ALA IPHONE (LIGHT THEME - TANPA IKON HIJAU) -->
+  <div id="iosToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[90] max-w-md w-[90%] bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-2xl rounded-2xl p-4 transition-all duration-300 -translate-y-24 opacity-0 pointer-events-none">
+    <div class="flex justify-between items-center mb-1">
+      <span id="toastPps" class="font-bold text-emerald-700 text-xs tracking-wider">ID PPS: -</span>
+      <span class="text-[10px] text-slate-400 font-medium">Info Santri</span>
+    </div>
+    <h4 id="toastNama" class="font-bold text-slate-800 text-sm mb-2">Nama Santri</h4>
+    <div id="toastDetail" class="text-slate-600 bg-slate-100/80 p-2.5 rounded-xl border border-slate-200/60 font-medium text-xs"></div>
+  </div>
+
+  <!-- TOMBOL IKON MELAYANG BISA DIPINDAH (DRAGGABLE FAB) -->
+  <button id="fabTable" onclick="handleFabClick(event)" class="fixed bottom-6 right-6 z-40 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white p-3.5 rounded-2xl shadow-2xl flex items-center justify-center transition-transform touch-none cursor-move border border-emerald-400/40">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M3 18h18M3 6h18"></path>
+    </svg>
+  </button>
+
+  <!-- Wrapper Scroll Utama -->
   <div id="scrollableArea" class="p-4 md:p-8">
     <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-6 my-2 border border-slate-200">
       
@@ -108,10 +122,84 @@
     </div>
   </div>
 
-  <!-- MODAL POPUP FOTO SANTRI (BOUNCE) -->
-  <div id="photoModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div id="photoModalCard" class="bg-white rounded-2xl max-w-lg w-full p-4 relative shadow-2xl overflow-hidden flex flex-col items-center">
-      <!-- Tombol Close -->
+  <!-- MODAL TABEL DATABASE SANTRI LENGKAP -->
+  <div id="tableModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+    <div id="tableModalCard" class="bg-white rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/80">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-emerald-800 flex items-center gap-2">
+            📊 Database Santri Lengkap
+          </h2>
+          <p class="text-[11px] text-slate-500">Gabungan seluruh data dari sistem spreadsheet</p>
+        </div>
+        <button onclick="closeTableModal()" class="text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+      </div>
+
+      <!-- Filter Controls & Stats Bar -->
+      <div class="px-4 py-2.5 bg-slate-100/60 border-b border-slate-200 flex flex-wrap justify-between items-center gap-2 text-xs">
+        <span id="tableTotalCount" class="text-slate-600 font-semibold">Menampilkan 0 data</span>
+        <button onclick="resetTableFilters()" class="text-emerald-700 hover:text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg font-medium text-[11px] transition">
+          🔄 Reset Filter
+        </button>
+      </div>
+
+      <!-- Table Scrollable Body -->
+      <div class="flex-grow overflow-auto p-2 sm:p-4">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr id="tableHeaderRow" class="bg-slate-100/80 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10 backdrop-blur-sm">
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700">
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal Footer (Paginasi 25 Baris) -->
+      <div class="p-3 border-t border-slate-200 bg-slate-50 flex justify-between items-center gap-2 text-xs">
+        <button id="btnPrevPage" onclick="changeTablePage(-1)" class="px-4 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold disabled:opacity-40">
+          « SBLM
+        </button>
+        <span id="tablePageInfo" class="font-semibold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
+          Halaman 1
+        </span>
+        <button id="btnNextPage" onclick="changeTablePage(1)" class="px-4 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold disabled:opacity-40">
+          NEXT »
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL POPUP FILTER (EXCEL STYLE POP-UP ALA IOS) -->
+  <div id="filterModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[80] flex items-center justify-center p-4 hidden">
+    <div id="filterModalCard" class="bg-white rounded-2xl max-w-sm w-full p-4 shadow-2xl border border-slate-200 flex flex-col max-h-[85vh]">
+      <div class="flex justify-between items-center mb-1">
+        <h3 id="filterModalTitle" class="text-sm font-bold text-emerald-800">Filter</h3>
+        <button onclick="closeFilterModal()" class="text-slate-400 hover:text-slate-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">✕</button>
+      </div>
+      <p class="text-[11px] text-slate-400 mb-3">Pilih daftar unik yang ingin ditampilkan</p>
+      
+      <input type="text" id="filterSearchInput" oninput="renderFilterOptionItems()" placeholder="Cari dalam pilihan..." class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-2">
+      
+      <div class="flex justify-between items-center text-[11px] px-1 mb-2">
+        <button type="button" onclick="selectAllFilterOptions(true)" class="text-emerald-600 hover:underline font-semibold">✓ Semua</button>
+        <button type="button" onclick="selectAllFilterOptions(false)" class="text-rose-500 hover:underline font-semibold">✕ Hapus</button>
+      </div>
+      
+      <div id="filterOptionList" class="flex-grow overflow-y-auto border border-slate-100 rounded-xl p-2 space-y-1.5 max-h-60 text-xs">
+      </div>
+      
+      <div class="flex gap-2 mt-4 pt-2 border-t border-slate-100">
+        <button type="button" onclick="closeFilterModal()" class="w-1/2 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">Batal</button>
+        <button type="button" onclick="applyCurrentFilterModal()" class="w-1/2 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 shadow-sm">Terapkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL POPUP FOTO SANTRI -->
+  <div id="photoModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div id="photoModalCard" class="bg-white/95 backdrop-blur-xl rounded-2xl max-w-lg w-full p-4 relative shadow-2xl border border-slate-200/80 overflow-hidden flex flex-col items-center">
       <button onclick="closePhotoModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center font-bold transition z-10">
         ✕
       </button>
@@ -120,8 +208,7 @@
       <p id="modalPps" class="text-xs text-slate-400 text-center"></p>
       <p id="modalDomisili" class="text-xs text-emerald-600 font-medium mb-3 text-center"></p>
 
-      <!-- Frame Foto Full -->
-      <div class="w-full h-96 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center relative border border-slate-200">
+      <div class="w-full h-96 bg-slate-100/70 rounded-xl overflow-hidden flex items-center justify-center relative border border-slate-200/70">
         <div id="photoLoading" class="flex flex-col items-center gap-2 text-emerald-600">
           <svg class="animate-spin h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -169,6 +256,7 @@
     };
 
     window.onload = function() {
+      initFabDrag();
       const localData = localStorage.getItem('SANTRI_DB_CACHE');
       if (localData) {
         try {
@@ -207,15 +295,17 @@
     function initDatabase(res, isFromCache) {
       DB.headersUtama = res.headersUtama;
       DB.dataUtama = res.dataUtama;
-      DB.mutaallimMap = res.mutaallimMap;
-      DB.mualimMap = res.mualimMap;
-      DB.tahfidzMap = res.tahfidzMap;
+      DB.mutaallimMap = res.mutaallimMap || {};
+      DB.mualimMap = res.mualimMap || {};
+      DB.tahfidzMap = res.tahfidzMap || {};
 
       document.getElementById('loading').classList.add('hidden');
       document.getElementById('searchInput').disabled = false;
       document.getElementById('searchBtn').disabled = false;
 
       if (isFromCache) document.getElementById('cacheBadge').classList.remove('hidden');
+
+      prepareUnifiedTableData();
     }
 
     let searchTimeout = null;
@@ -263,9 +353,6 @@
       }, 10);
     }
 
-    // ==========================================
-    // RENDER KARTU NAMA MINIMALIS
-    // ==========================================
     function renderCurrentCard() {
       const container = document.getElementById('resultContainer');
       const infoMsg = document.getElementById('infoMessage');
@@ -275,7 +362,6 @@
       const row = searchResults[currentCardIndex];
       const total = searchResults.length;
 
-      // Indicator Jumlah Hasil
       infoMsg.innerHTML = `
         <div class="flex justify-between items-center text-xs text-slate-500 mb-3 px-1">
           <span>Ditemukan <strong>${total}</strong> data</span>
@@ -287,16 +373,13 @@
       const idPps = row[0] ? row[0].trim() : '';
       const nama = row[1] ? row[1].trim() : 'Tanpa Nama';
 
-      // Ambil Kontak
       const indexKontak = DB.headersUtama.findIndex(header => header.toUpperCase() === "KONTAK WALI");
       let infoKontakWali = (indexKontak !== -1) ? row[indexKontak] : "";
 
-      // Ambil Link Foto
       const fotoIndex = DB.headersUtama.findIndex(header => header.toUpperCase() === "FOTO");
       let rawFotoUrl = (fotoIndex !== -1 && row[fotoIndex]) ? row[fotoIndex] : "";
       let safeFotoUrl = getSafeImageUrl(rawFotoUrl);
 
-      // Status Badges
       const isMutaallim = DB.mutaallimMap.hasOwnProperty(idPps);
       const isMualim = DB.mualimMap.hasOwnProperty(idPps);
       const isTahfidz = DB.tahfidzMap.hasOwnProperty(idPps);
@@ -307,7 +390,6 @@
       if (isTahfidz) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">Tahfidz</span>`);
       if (statusBadges.length === 0) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-600 border border-slate-200">Santri Regular</span>`);
 
-      // List Data Utama (Tanpa Box Kaku)
       let detailUtamaHtml = '';
       DB.headersUtama.forEach((header, idx) => {
         let namaHeader = header.toUpperCase();
@@ -321,16 +403,13 @@
           </div>`;
       });
 
-      // Extra Status Sections
       let statusSectionsHtml = '';
       if (isMutaallim) statusSectionsHtml += buildExtraCardMinimal("Muta'allim", DB.mutaallimMap[idPps], 'bg-amber-50/60 border-amber-100 text-amber-900');
       if (isMualim) statusSectionsHtml += buildExtraCardMinimal("Mu'allim", DB.mualimMap[idPps], 'bg-blue-50/60 border-blue-100 text-blue-900');
       if (isTahfidz) statusSectionsHtml += buildExtraCardMinimal("Tahfidz", DB.tahfidzMap[idPps], 'bg-emerald-50/60 border-emerald-100 text-emerald-900');
 
-      // Hint navigasi usap/ketuk
       const navHint = total > 1 ? `<div class="text-[10px] text-slate-400 text-center mt-3 pt-2 border-t border-slate-100 flex items-center justify-center gap-1"><span>👈 Usap / ketuk tepi kartu untuk berpindah 👉</span></div>` : '';
 
-      // KARTU NAMA MINIMALIS TEMPLATE
       const card = `
       <div class="card-perspective relative select-none">
         <div id="cardFlipWrapper" 
@@ -340,9 +419,7 @@
              ontouchend="handleCardTouchEnd(event)" 
              onclick="handleCardClick(event)">
           
-          <!-- ID Card Header (Foto Thumbnail + Nama + ID) -->
           <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
-            <!-- Thumbnail Foto -->
             <div class="relative group cursor-pointer flex-shrink-0" onclick="openPhotoModal()">
               ${safeFotoUrl ? `
                 <img src="${safeFotoUrl}" alt="Thumbnail Santri" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm hover:scale-105 transition-transform">
@@ -356,7 +433,6 @@
               </div>
             </div>
 
-            <!-- Info Dasar -->
             <div class="flex-grow min-w-0">
               <span class="text-[10px] font-bold tracking-wider text-emerald-600 uppercase">ID PPS: ${idPps || '-'}</span>
               <h2 class="text-lg font-bold text-slate-800 truncate leading-snug">${nama}</h2>
@@ -364,14 +440,12 @@
             </div>
           </div>
 
-          <!-- Detail Data Santri -->
           <div class="mt-3">
             ${detailUtamaHtml}
           </div>
 
           ${statusSectionsHtml}
 
-          <!-- Footer Kartu Nama (Ikon WA & Action) -->
           <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="text-[11px] text-slate-400 font-medium mr-1">Hubungi:</span>
@@ -429,13 +503,8 @@
       }, 150);
     }
 
-    function nextCard() {
-      changeCard(1);
-    }
-
-    function prevCard() {
-      changeCard(-1);
-    }
+    function nextCard() { changeCard(1); }
+    function prevCard() { changeCard(-1); }
 
     function handleCardTouchStart(e) {
       if (e.touches.length === 1) {
@@ -454,7 +523,6 @@
       const diffX = currentX - cardStartX;
       const diffY = currentY - cardStartY;
 
-      // Gerakan rotasi miring mengikuti sentuhan layar secara horizontal
       if (Math.abs(diffX) > Math.abs(diffY)) {
         cardDeltaX = diffX;
         const wrapper = document.getElementById('cardFlipWrapper');
@@ -473,11 +541,8 @@
       }
 
       if (Math.abs(cardDeltaX) > 40) {
-        if (cardDeltaX < 0) {
-          nextCard();
-        } else {
-          prevCard();
-        }
+        if (cardDeltaX < 0) nextCard();
+        else prevCard();
       }
       cardStartX = 0;
       cardStartY = 0;
@@ -485,16 +550,11 @@
     }
 
     function handleCardClick(e) {
-      // Abaikan jika yang diklik adalah tombol/ikon interaktif (WA, Zoom, dll)
       if (e.target.closest('button, a, input, .group')) return;
-
       const rect = e.currentTarget.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
-      if (clickX > rect.width / 2) {
-        nextCard();
-      } else {
-        prevCard();
-      }
+      if (clickX > rect.width / 2) nextCard();
+      else prevCard();
     }
 
     function buildExtraCardMinimal(title, dataObj, colorClass) {
@@ -518,7 +578,6 @@
         </div>`;
     }
 
-    // Google Drive Safe Thumbnail API Generator
     function getSafeImageUrl(rawUrl) {
       if (!rawUrl) return "";
       let url = rawUrl.trim();
@@ -539,7 +598,6 @@
       return url;
     }
 
-    // MEMBUAT TOMBOL IKON WA SAJA (SUPPORT 1 ATAU 2 NOMOR TERPISAH)
     function buatTombolWA(kolomKontak) {
       if (!kolomKontak || kolomKontak.trim() === "") {
         return `<span class="text-slate-300 text-xs">-</span>`;
@@ -550,10 +608,7 @@
 
       nomorArray.forEach(nomor => {
         let nomorBersih = nomor.trim().replace(/[\s\-\+]/g, '');
-
-        if (nomorBersih.startsWith('0')) {
-          nomorBersih = '62' + nomorBersih.substring(1);
-        }
+        if (nomorBersih.startsWith('0')) nomorBersih = '62' + nomorBersih.substring(1);
 
         if (nomorBersih.length > 7) {
           kumpulanTombol += `
@@ -571,14 +626,12 @@
       return kumpulanTombol || `<span class="text-slate-300 text-xs">-</span>`;
     }
 
-    // OPEN PHOTO MODAL DENGAN BOUNCE ANIMATION
     function openPhotoModal() {
       if (searchResults.length === 0 || !searchResults[currentCardIndex]) return;
       const santriPilih = searchResults[currentCardIndex];
       const idPps = santriPilih[0] ? santriPilih[0].trim() : '-';
       const nama = santriPilih[1] ? santriPilih[1].trim() : 'Tanpa Nama';
 
-      // Ambil data Domisili (bukan Status Domisili)
       const domisiliIndex = DB.headersUtama.findIndex(header => header.trim().toUpperCase() === "DOMISILI");
       let domisiliVal = (domisiliIndex !== -1 && santriPilih[domisiliIndex]) ? santriPilih[domisiliIndex] : "";
 
@@ -592,16 +645,14 @@
       const loading = document.getElementById('photoLoading');
       const errorDiv = document.getElementById('photoError');
 
-      // Reset Modal State
       img.classList.add('hidden');
       errorDiv.classList.add('hidden');
       loading.classList.remove('hidden');
       img.src = "";
       
-      // Tambahkan efek bounce animation
-      modalCard.classList.remove('animate-bounce-modal');
-      void modalCard.offsetWidth; // trigger reflow
-      modalCard.classList.add('animate-bounce-modal');
+      modalCard.classList.remove('animate-ios-modal');
+      void modalCard.offsetWidth;
+      modalCard.classList.add('animate-ios-modal');
 
       modal.classList.remove('hidden');
 
@@ -633,6 +684,346 @@
 
     function closePhotoModal() {
       document.getElementById('photoModal').classList.add('hidden');
+    }
+
+    // =========================================================
+    // VLOOKUP GABUNGAN SEMUA SHEET & POPUP FILTER EXCEL ALA IOS
+    // =========================================================
+    let unifiedTableHeaders = [];
+    let unifiedTableData = [];
+    let filteredTableData = [];
+    let tableCurrentPage = 1;
+    const tablePageSize = 25;
+    
+    let activeColumnFilters = {}; // { [headerName]: Set of selected values }
+    let currentFilterHeader = '';
+    let currentHeaderUniqueValues = [];
+
+    function prepareUnifiedTableData() {
+      if (!DB.dataUtama || DB.dataUtama.length === 0) return;
+
+      // 1. Header Sheet Utama (Abaikan Foto/WA)
+      let baseHeaders = DB.headersUtama.filter(h => {
+        let name = h.toUpperCase().trim();
+        return name !== "FOTO" && name !== "KONTAK WALI" && name !== "WA";
+      });
+
+      // 2. Kumpulkan Semua Header Unik dari Sheet Lain (Mutaallim, Mualim, Tahfidz)
+      let extraHeadersSet = new Set();
+      let maps = [DB.mutaallimMap, DB.mualimMap, DB.tahfidzMap];
+      
+      maps.forEach(mapObj => {
+        if (!mapObj) return;
+        Object.values(mapObj).forEach(item => {
+          if (typeof item === 'object' && item !== null) {
+            Object.keys(item).forEach(k => {
+              if (!baseHeaders.includes(k)) {
+                extraHeadersSet.add(k);
+              }
+            });
+          }
+        });
+      });
+
+      let extraHeaders = Array.from(extraHeadersSet);
+
+      // Gabungkan: Header Sheet Utama Dulu, Lalu Kolom Sheet Lain ditaruh PALING UJUNG
+      unifiedTableHeaders = [...baseHeaders, ...extraHeaders];
+
+      // 3. Gabungkan Data (VLOOKUP Berdasarkan ID PPS)
+      unifiedTableData = DB.dataUtama.map(row => {
+        let idPps = row[0] ? String(row[0]).trim() : '';
+        let item = {};
+
+        // Ambil data sheet utama
+        baseHeaders.forEach(header => {
+          let origIdx = DB.headersUtama.indexOf(header);
+          item[header] = (origIdx !== -1 && row[origIdx] !== undefined && row[origIdx] !== null && String(row[origIdx]).trim() !== '') ? String(row[origIdx]).trim() : '-';
+        });
+
+        // VLOOKUP dari Sheet Lain
+        extraHeaders.forEach(header => {
+          let foundVal = '-';
+          if (DB.mutaallimMap && DB.mutaallimMap[idPps] && DB.mutaallimMap[idPps][header] !== undefined) {
+            foundVal = DB.mutaallimMap[idPps][header];
+          } else if (DB.mualimMap && DB.mualimMap[idPps] && DB.mualimMap[idPps][header] !== undefined) {
+            foundVal = DB.mualimMap[idPps][header];
+          } else if (DB.tahfidzMap && DB.tahfidzMap[idPps] && DB.tahfidzMap[idPps][header] !== undefined) {
+            foundVal = DB.tahfidzMap[idPps][header];
+          }
+
+          item[header] = (foundVal !== undefined && foundVal !== null && String(foundVal).trim() !== '') ? String(foundVal).trim() : '-';
+        });
+
+        return item;
+      });
+
+      filteredTableData = [...unifiedTableData];
+    }
+
+    function openTableModal() {
+      if (unifiedTableData.length === 0) prepareUnifiedTableData();
+
+      const modal = document.getElementById('tableModal');
+      const modalCard = document.getElementById('tableModalCard');
+
+      modalCard.classList.remove('animate-bounce-modal');
+      void modalCard.offsetWidth;
+      modalCard.classList.add('animate-bounce-modal');
+
+      modal.classList.remove('hidden');
+      renderTableHeaders();
+      renderTableData();
+    }
+
+    function closeTableModal() {
+      document.getElementById('tableModal').classList.add('hidden');
+    }
+
+    function renderTableHeaders() {
+      const trHeader = document.getElementById('tableHeaderRow');
+      trHeader.innerHTML = '';
+
+      unifiedTableHeaders.forEach((header, idx) => {
+        const th = document.createElement('th');
+        th.className = 'px-3 py-2 text-xs font-semibold tracking-wider text-slate-700 whitespace-nowrap select-none';
+
+        let isFiltered = activeColumnFilters[header] && activeColumnFilters[header].size > 0;
+        let btnColorClass = isFiltered ? 'bg-emerald-600 text-white font-bold' : 'bg-white/80 text-slate-400 hover:text-slate-600 border-slate-200';
+
+        let content = `<div class="flex items-center justify-between gap-2"><span>${header}</span>`;
+
+        // Kolom 0 (ID PPS) & Kolom 1 (Nama) TIDAK diberi tombol filter agar aplikasi cepat & efisien
+        if (idx > 1) {
+          content += `
+            <button onclick="openFilterModal('${header.replace(/'/g, "\\'")}')" class="${btnColorClass} text-[10px] px-1.5 py-0.5 rounded-md border shadow-sm transition flex items-center gap-1">
+              <span>▼</span>
+            </button>`;
+        }
+        content += `</div>`;
+
+        th.innerHTML = content;
+        trHeader.appendChild(th);
+      });
+    }
+
+    // ==========================================
+    // EFEK POP-UP FILTER ALA IOS
+    // ==========================================
+    function openFilterModal(header) {
+      currentFilterHeader = header;
+      const modal = document.getElementById('filterModal');
+      const modalCard = document.getElementById('filterModalCard');
+      document.getElementById('filterModalTitle').innerText = `Filter: ${header}`;
+      document.getElementById('filterSearchInput').value = '';
+
+      let valSet = new Set();
+      unifiedTableData.forEach(row => {
+        let v = row[header] !== undefined && row[header] !== null ? String(row[header]) : '-';
+        valSet.add(v);
+      });
+
+      currentHeaderUniqueValues = Array.from(valSet).sort();
+
+      renderFilterOptionItems();
+
+      modalCard.classList.remove('animate-ios-modal');
+      void modalCard.offsetWidth;
+      modalCard.classList.add('animate-ios-modal');
+      modal.classList.remove('hidden');
+    }
+
+    function closeFilterModal() {
+      document.getElementById('filterModal').classList.add('hidden');
+    }
+
+    function renderFilterOptionItems() {
+      const container = document.getElementById('filterOptionList');
+      const searchTerm = document.getElementById('filterSearchInput').value.toLowerCase().trim();
+      container.innerHTML = '';
+
+      let existingSelection = activeColumnFilters[currentFilterHeader];
+
+      currentHeaderUniqueValues.forEach((val) => {
+        if (searchTerm && !val.toLowerCase().includes(searchTerm)) return;
+
+        let isChecked = !existingSelection || existingSelection.has(val);
+        let itemDiv = document.createElement('label');
+        itemDiv.className = 'flex items-center gap-2 py-1 px-1.5 hover:bg-slate-50 rounded cursor-pointer text-xs text-slate-700 select-none';
+        
+        let safeVal = val.replace(/"/g, '&quot;');
+        itemDiv.innerHTML = `
+          <input type="checkbox" value="${safeVal}" ${isChecked ? 'checked' : ''} class="filter-chk rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5">
+          <span class="truncate">${val}</span>
+        `;
+        container.appendChild(itemDiv);
+      });
+    }
+
+    function selectAllFilterOptions(status) {
+      const chks = document.querySelectorAll('#filterOptionList .filter-chk');
+      chks.forEach(chk => chk.checked = status);
+    }
+
+    function applyCurrentFilterModal() {
+      const chks = document.querySelectorAll('#filterOptionList .filter-chk');
+      let selectedValues = new Set();
+      chks.forEach(chk => {
+        if (chk.checked) selectedValues.add(chk.value);
+      });
+
+      const searchTerm = document.getElementById('filterSearchInput').value.toLowerCase().trim();
+      if (searchTerm) {
+        currentHeaderUniqueValues.forEach(val => {
+          if (!val.toLowerCase().includes(searchTerm)) {
+            if (!activeColumnFilters[currentFilterHeader] || activeColumnFilters[currentFilterHeader].has(val)) {
+              selectedValues.add(val);
+            }
+          }
+        });
+      }
+
+      if (selectedValues.size === currentHeaderUniqueValues.length) {
+        delete activeColumnFilters[currentFilterHeader];
+      } else {
+        activeColumnFilters[currentFilterHeader] = selectedValues;
+      }
+
+      closeFilterModal();
+      tableCurrentPage = 1;
+      renderTableHeaders();
+      renderTableData();
+    }
+
+    function resetTableFilters() {
+      activeColumnFilters = {};
+      tableCurrentPage = 1;
+      renderTableHeaders();
+      renderTableData();
+    }
+
+    function renderTableData() {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      filteredTableData = unifiedTableData.filter(row => {
+        for (let header in activeColumnFilters) {
+          let allowedSet = activeColumnFilters[header];
+          let cellVal = row[header] !== undefined && row[header] !== null ? String(row[header]) : '-';
+          if (allowedSet && !allowedSet.has(cellVal)) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      const total = filteredTableData.length;
+      const totalPages = Math.ceil(total / tablePageSize) || 1;
+      if (tableCurrentPage > totalPages) tableCurrentPage = totalPages;
+
+      document.getElementById('tableTotalCount').innerHTML = `Menampilkan <strong class="text-emerald-700">${total}</strong> dari ${unifiedTableData.length} data santri`;
+      document.getElementById('tablePageInfo').innerText = `Halaman ${tableCurrentPage} dari ${totalPages}`;
+
+      document.getElementById('btnPrevPage').disabled = (tableCurrentPage <= 1);
+      document.getElementById('btnNextPage').disabled = (tableCurrentPage >= totalPages);
+
+      const startIndex = (tableCurrentPage - 1) * tablePageSize;
+      const pageData = filteredTableData.slice(startIndex, startIndex + tablePageSize);
+
+      if (pageData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${unifiedTableHeaders.length}" class="text-center py-8 text-slate-400">Tidak ada data yang sesuai filter.</td></tr>`;
+        return;
+      }
+
+      pageData.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-emerald-50/60 transition cursor-pointer active:bg-emerald-100/70';
+
+        unifiedTableHeaders.forEach(header => {
+          const td = document.createElement('td');
+          td.className = 'px-3 py-2.5 whitespace-nowrap text-xs border-b border-slate-100';
+          td.innerText = row[header] || '-';
+          
+          td.onclick = () => showIosToast(row, header);
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function changeTablePage(dir) {
+      tableCurrentPage += dir;
+      renderTableData();
+    }
+
+    // NOTIFIKASI ALA IPHONE / IOS (BERSIH TANPA IKON HIJAU)
+    let toastTimeout = null;
+    function showIosToast(rowObj, clickedHeader) {
+      const toast = document.getElementById('iosToast');
+      const ppsEl = document.getElementById('toastPps');
+      const namaEl = document.getElementById('toastNama');
+      const detailEl = document.getElementById('toastDetail');
+
+      let idPps = rowObj['ID PPS'] || rowObj[unifiedTableHeaders[0]] || '-';
+      let nama = rowObj['Nama'] || rowObj[unifiedTableHeaders[1]] || 'Santri';
+      let valClicked = rowObj[clickedHeader] || '-';
+
+      ppsEl.innerText = "ID PPS: " + idPps;
+      namaEl.innerText = nama;
+      detailEl.innerText = `${clickedHeader}: ${valClicked}`;
+
+      toast.classList.remove('-translate-y-24', 'opacity-0', 'pointer-events-none');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('-translate-y-24', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+
+    // DRAGGABLE FAB LOGIC
+    let fabMoved = false;
+    function initFabDrag() {
+      const fab = document.getElementById('fabTable');
+      let isDragging = false;
+      let startX, startY, initialX = 0, initialY = 0;
+
+      function onPointerDown(e) {
+        fabMoved = false;
+        isDragging = true;
+        startX = (e.touches ? e.touches[0].clientX : e.clientX) - initialX;
+        startY = (e.touches ? e.touches[0].clientY : e.clientY) - initialY;
+      }
+
+      function onPointerMove(e) {
+        if (!isDragging) return;
+        const currentX = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
+        const currentY = (e.touches ? e.touches[0].clientY : e.clientY) - startY;
+
+        if (Math.abs(currentX - initialX) > 5 || Math.abs(currentY - initialY) > 5) {
+          fabMoved = true;
+        }
+
+        initialX = currentX;
+        initialY = currentY;
+        fab.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+      }
+
+      function onPointerUp() { isDragging = false; }
+
+      fab.addEventListener('touchstart', onPointerDown, {passive: true});
+      window.addEventListener('touchmove', onPointerMove, {passive: true});
+      window.addEventListener('touchend', onPointerUp);
+
+      fab.addEventListener('mousedown', onPointerDown);
+      window.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+    }
+
+    function handleFabClick(e) {
+      if (!fabMoved) openTableModal();
     }
   </script>
 </body>
