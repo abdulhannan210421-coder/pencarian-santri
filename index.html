@@ -21,7 +21,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    #scrollableArea {
+    #scrollableArea, .modal-scrollable {
       height: 100%;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
@@ -92,9 +92,6 @@
           <button onclick="openStatsModal()" title="Statistik Santri" class="text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
             📊 <span class="hidden sm:inline">Statistik Santri</span>
           </button>
-          <button onclick="toggleFilterFavorit()" id="btnFavoritFilter" title="Favorit" class="text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1 shadow-sm active:scale-95">
-            ⭐ <span class="hidden sm:inline">Favorit</span> (<span id="favCountBadge">0</span>)
-          </button>
           <span id="cacheBadge" class="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-full font-semibold border border-slate-200/60 hidden">
             ⚡ <span class="hidden sm:inline">Ter-cache</span>
           </span>
@@ -137,7 +134,7 @@
     </div>
   </div>
 
-  <!-- MODAL STATISTIK & DASHBOARD (SOLVED OVERLAY & DYNAMIC HEIGHT CHART) -->
+  <!-- MODAL STATISTIK & DASHBOARD -->
   <div id="statsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-3 sm:p-4 hidden">
     <div id="statsModalCard" class="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden relative">
       
@@ -164,15 +161,13 @@
           <button id="tabBtnKelas" onclick="switchStatsTab('kelas')" class="py-1.5 px-3 rounded-lg hover:text-slate-900 transition">Kelas</button>
         </div>
         
-        <div class="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-2 text-xs">
-          <span class="text-slate-400 font-medium text-[11px]">Kolom Lain:</span>
-          <select id="statsColumnSelect" onchange="onStatsColumnSelectChange(this.value)" class="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-          </select>
-        </div>
+        <select id="statsColumnSelect" onchange="onStatsColumnSelectChange(this.value)" class="w-full sm:w-auto bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="">-- Pilih Kolom --</option>
+        </select>
       </div>
 
       <!-- Dynamic Chart Scroll Container -->
-      <div class="p-4 flex-grow overflow-y-auto flex flex-col items-center justify-start min-h-[300px]">
+      <div class="p-4 flex-grow modal-scrollable flex flex-col items-center justify-start min-h-[300px]">
         <div id="chartCanvasWrapper" class="w-full relative min-h-[260px] flex items-center justify-center">
           <canvas id="statsChartCanvas"></canvas>
         </div>
@@ -193,9 +188,6 @@
           <p class="text-[11px] text-slate-400">Data gabungan seluruh sheet spreadsheet</p>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="exportToCSV()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm active:scale-95">
-            📥 Export CSV
-          </button>
           <button onclick="closeTableModal()" class="text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">✕</button>
         </div>
       </div>
@@ -209,7 +201,7 @@
       </div>
 
       <!-- Table Scrollable Body -->
-      <div class="flex-grow overflow-auto p-2 sm:p-4">
+      <div class="flex-grow modal-scrollable p-2 sm:p-4">
         <table class="w-full text-left text-xs border-collapse">
           <thead>
             <tr id="tableHeaderRow" class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10">
@@ -251,7 +243,7 @@
         <button type="button" onclick="selectAllFilterOptions(false)" class="text-rose-500 hover:underline font-semibold">✕ Hapus</button>
       </div>
       
-      <div id="filterOptionList" class="flex-grow overflow-y-auto border border-slate-100 rounded-xl p-2 space-y-1 max-h-60 text-xs">
+      <div id="filterOptionList" class="flex-grow modal-scrollable border border-slate-100 rounded-xl p-2 space-y-1 max-h-60 text-xs">
       </div>
       
       <div class="flex gap-2 mt-4 pt-2 border-t border-slate-100">
@@ -330,12 +322,8 @@
       tahfidzMap: {}
     };
 
-    let favoritedSet = new Set();
-    let isFavoritFilterActive = false;
-
     window.onload = function() {
       initFabDrag();
-      loadFavoritedFromStorage();
 
       const localData = localStorage.getItem('SANTRI_DB_CACHE');
       if (localData) {
@@ -349,70 +337,6 @@
       }
       fetchDataFromServer(true);
     };
-
-    function loadFavoritedFromStorage() {
-      try {
-        const saved = localStorage.getItem('SANTRI_FAVORITES');
-        if (saved) favoritedSet = new Set(JSON.parse(saved));
-      } catch(e) {
-        favoritedSet = new Set();
-      }
-      updateFavCountBadge();
-    }
-
-    function saveFavoritedToStorage() {
-      try {
-        localStorage.setItem('SANTRI_FAVORITES', JSON.stringify(Array.from(favoritedSet)));
-      } catch(e){}
-      updateFavCountBadge();
-    }
-
-    function updateFavCountBadge() {
-      document.getElementById('favCountBadge').innerText = favoritedSet.size;
-    }
-
-    function toggleFavorite(idPps, e) {
-      if(e) e.stopPropagation();
-      if (favoritedSet.has(idPps)) {
-        favoritedSet.delete(idPps);
-      } else {
-        favoritedSet.add(idPps);
-      }
-      saveFavoritedToStorage();
-      renderCurrentCard();
-    }
-
-    function toggleFilterFavorit() {
-      isFavoritFilterActive = !isFavoritFilterActive;
-      const btn = document.getElementById('btnFavoritFilter');
-      if (isFavoritFilterActive) {
-        btn.className = "text-xs font-semibold bg-amber-500 text-white border border-amber-600 px-3.5 py-1.5 rounded-full transition flex items-center gap-1 shadow-sm active:scale-95";
-        lakukanPencarianFavorit();
-      } else {
-        btn.className = "text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/60 px-3.5 py-1.5 rounded-full transition flex items-center gap-1 shadow-sm active:scale-95";
-        document.getElementById('searchInput').value = '';
-        lakukanPencarianFast(true);
-      }
-    }
-
-    function lakukanPencarianFavorit() {
-      const container = document.getElementById('resultContainer');
-      const infoMsg = document.getElementById('infoMessage');
-      container.innerHTML = '';
-      infoMsg.innerHTML = '';
-
-      searchResults = DB.dataUtama.filter(row => {
-        const idPps = row[0] ? String(row[0]).trim() : '';
-        return favoritedSet.has(idPps);
-      });
-
-      currentCardIndex = 0;
-      if (searchResults.length === 0) {
-        container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-2xl">Belum ada santri yang ditandai sebagai favorit ⭐.</div>`;
-        return;
-      }
-      renderCurrentCard();
-    }
 
     function fetchDataFromServer(showLoadingUI) {
       if (showLoadingUI) document.getElementById('loading').classList.remove('hidden');
@@ -469,9 +393,6 @@
     }
 
     function lakukanPencarianFast(isForce) {
-      isFavoritFilterActive = false;
-      document.getElementById('btnFavoritFilter').className = "text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/60 px-3.5 py-1.5 rounded-full transition flex items-center gap-1 shadow-sm active:scale-95";
-
       const inputEl = document.getElementById('searchInput');
       const keyword = inputEl.value.toLowerCase().trim();
       const container = document.getElementById('resultContainer');
@@ -503,6 +424,155 @@
       }, 10);
     }
 
+    // LOGIKA EKSTRAKSI & FORMAT TANGGAL LAHIR (DDMMYYYY)
+    function getFormattedBirthDate(row, headers) {
+      if (!row || !headers) return '';
+
+      const monthMap = {
+        'januari': '01', 'january': '01', 'jan': '01', '01': '01', '1': '01',
+        'februari': '02', 'february': '02', 'feb': '02', '02': '02', '2': '02',
+        'maret': '03', 'march': '03', 'mar': '03', '03': '03', '3': '03',
+        'april': '04', 'apr': '04', '04': '04', '4': '04',
+        'mei': '05', 'may': '05', '05': '05', '5': '05',
+        'juni': '06', 'june': '06', 'jun': '06', '06': '06', '6': '06',
+        'juli': '07', 'july': '07', 'jul': '07', '07': '07', '7': '07',
+        'agustus': '08', 'august': '08', 'agt': '08', 'agus': '08', 'aug': '08', '08': '08', '8': '08',
+        'september': '09', 'sep': '09', 'sept': '09', '09': '09', '9': '09',
+        'oktober': '10', 'october': '10', 'okt': '10', 'oct': '10', '10': '10',
+        'november': '11', 'nov': '11', '11': '11',
+        'desember': '12', 'december': '12', 'des': '12', 'dec': '12', '12': '12'
+      };
+
+      let day = '', month = '', year = '';
+
+      function cleanMonth(mStr) {
+        if (!mStr) return '';
+        const clean = String(mStr).toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+        if (monthMap[clean]) return monthMap[clean];
+        const n = parseInt(clean, 10);
+        if (!isNaN(n) && n >= 1 && n <= 12) return String(n).padStart(2, '0');
+        return '';
+      }
+
+      function cleanDay(dStr) {
+        if (!dStr) return '';
+        const num = String(dStr).match(/\d+/);
+        if (num) {
+          const n = parseInt(num[0], 10);
+          if (n >= 1 && n <= 31) return String(n).padStart(2, '0');
+        }
+        return '';
+      }
+
+      function cleanYear(yStr) {
+        if (!yStr) return '';
+        const num = String(yStr).match(/\d{2,4}/);
+        if (num) {
+          let y = num[0];
+          if (y.length === 2) {
+            y = (parseInt(y, 10) > 30 ? '19' : '20') + y;
+          }
+          return y;
+        }
+        return '';
+      }
+
+      let tglVal = '', blnVal = '', thnVal = '';
+
+      headers.forEach((h, idx) => {
+        const hClean = String(h).toUpperCase().trim();
+        const val = row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '';
+
+        if (!val) return;
+
+        if ((hClean.includes('TANGGAL') || hClean.includes('TGL')) && !hClean.includes('TEMPAT') && !hClean.includes('TTL') && !hClean.includes('BULAN') && !hClean.includes('TAHUN')) {
+          if (val.length <= 2 || /^\d{1,2}$/.test(val)) {
+            tglVal = val;
+          }
+        }
+        if (hClean.includes('BULAN') || hClean.includes('BLN')) {
+          blnVal = val;
+        }
+        if (hClean.includes('TAHUN') || hClean.includes('THN')) {
+          thnVal = val;
+        }
+      });
+
+      if (tglVal) day = cleanDay(tglVal);
+      if (blnVal) month = cleanMonth(blnVal);
+      if (thnVal) year = cleanYear(thnVal);
+
+      if (!day || !month || !year) {
+        headers.forEach((h, idx) => {
+          if (day && month && year) return;
+
+          const val = row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '';
+          if (!val) return;
+
+          const hClean = String(h).toUpperCase().trim();
+          const isTTLHeader = hClean.includes('TTL') || hClean.includes('LAHIR') || hClean.includes('TANGGAL') || hClean.includes('TGL');
+
+          if (isTTLHeader || /\d{1,2}/.test(val)) {
+            let strToParse = val;
+            if (strToParse.includes(',')) {
+              const splitComma = strToParse.split(',');
+              strToParse = splitComma[splitComma.length - 1].trim();
+            }
+
+            const match = strToParse.match(/(\d{1,2})[\s\-\/.,]+([A-Za-z0-9]+)[\s\-\/.,]+(\d{2,4})/);
+            if (match) {
+              const dCand = cleanDay(match[1]);
+              const mCand = cleanMonth(match[2]);
+              const yCand = cleanYear(match[3]);
+
+              if (dCand && mCand && yCand) {
+                if (!day) day = dCand;
+                if (!month) month = mCand;
+                if (!year) year = yCand;
+              }
+            }
+          }
+        });
+      }
+
+      if (day && month && year) {
+        return `${day}${month}${year}`;
+      }
+      return '';
+    }
+
+    // FUNGSI SALIN ID PPS & TANGGAL LAHIR
+    function salinDataSantriCard(event) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+
+      if (!searchResults || !searchResults[currentCardIndex]) return;
+      const row = searchResults[currentCardIndex];
+      const idPps = row[0] ? String(row[0]).trim() : '';
+
+      const dobCode = getFormattedBirthDate(row, DB.headersUtama);
+      const textToCopy = dobCode ? `${idPps} ${dobCode}` : `${idPps}`;
+
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const btn = event ? event.currentTarget : document.getElementById('btnCopyCard');
+        if (btn) {
+          const oldText = btn.innerHTML;
+          btn.innerHTML = '✓ Tersalin';
+          btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+          btn.classList.add('bg-emerald-800');
+          setTimeout(() => {
+            btn.innerHTML = oldText;
+            btn.classList.remove('bg-emerald-800');
+            btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+          }, 1200);
+        }
+      }).catch(() => {
+        alert('Gagal menyalin data santri.');
+      });
+    }
+
     function renderCurrentCard() {
       const container = document.getElementById('resultContainer');
       const infoMsg = document.getElementById('infoMessage');
@@ -522,7 +592,6 @@
 
       const idPps = row[0] ? String(row[0]).trim() : '';
       const nama = row[1] ? String(row[1]).trim() : 'Tanpa Nama';
-      const isFav = favoritedSet.has(idPps);
 
       const indexKontak = DB.headersUtama.findIndex(header => header.toUpperCase() === "KONTAK WALI");
       let infoKontakWali = (indexKontak !== -1) ? row[indexKontak] : "";
@@ -570,12 +639,11 @@
              ontouchend="handleCardTouchEnd(event)" 
              onclick="handleCardClick(event)">
           
-          <!-- Favorit Star Button -->
-          <button onclick="toggleFavorite('${escapeHTML(idPps)}', event)" class="absolute top-4 right-4 text-xl p-1 transition hover:scale-125 active:scale-90 z-10" title="Tandai Favorit">
-            ${isFav ? '⭐' : '☆'}
+          <button id="btnCopyCard" onclick="salinDataSantriCard(event)" class="absolute top-4 right-4 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1 z-10" title="Salin ID PPS & Tanggal Lahir">
+            📋 Salin
           </button>
 
-          <div class="flex items-center gap-4 pb-4 border-b border-slate-100 pr-8">
+          <div class="flex items-center gap-4 pb-4 border-b border-slate-100 pr-20">
             <div class="relative group cursor-pointer flex-shrink-0" onclick="openPhotoModal()">
               ${safeFotoUrl ? `
                 <img src="${safeFotoUrl}" alt="Thumbnail Santri" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm hover:scale-105 transition-transform">
@@ -943,13 +1011,17 @@
 
         if (idx > 1) {
           content += `
-            <button onclick="openFilterModal('${header.replace(/'/g, "\'")}')" class="${btnColorClass} text-[10px] px-1.5 py-0.5 rounded-md border shadow-sm transition flex items-center gap-1">
+            <button class="${btnColorClass} text-[10px] px-1.5 py-0.5 rounded-md border shadow-sm transition flex items-center gap-1">
               <span>▼</span>
             </button>`;
         }
         content += `</div>`;
 
         th.innerHTML = content;
+        if (idx > 1) {
+          const btn = th.querySelector('button');
+          if (btn) btn.onclick = () => openFilterModal(header);
+        }
         trHeader.appendChild(th);
       });
     }
@@ -1006,18 +1078,14 @@
     function onFilterSearchInput() {
       const searchTerm = document.getElementById('filterSearchInput').value.toLowerCase().trim();
       
-      if (searchTerm !== '') {
-        let matchingValues = currentHeaderUniqueValues.filter(val => val.toLowerCase().includes(searchTerm));
-        currentModalSelectedSet = new Set(matchingValues);
+      if (searchTerm) {
+        currentModalSelectedSet = new Set(
+          currentHeaderUniqueValues.filter(val => String(val).toLowerCase().includes(searchTerm))
+        );
       } else {
-        if (activeColumnFilters[currentFilterHeader]) {
-          currentModalSelectedSet = new Set(
-            Array.from(activeColumnFilters[currentFilterHeader]).filter(v => currentHeaderUniqueValues.includes(v))
-          );
-        } else {
-          currentModalSelectedSet = new Set(currentHeaderUniqueValues);
-        }
+        currentModalSelectedSet = new Set(currentHeaderUniqueValues);
       }
+      
       renderFilterOptionItems();
     }
 
@@ -1027,7 +1095,7 @@
       container.innerHTML = '';
 
       currentHeaderUniqueValues.forEach((val) => {
-        if (searchTerm && !val.toLowerCase().includes(searchTerm)) return;
+        if (searchTerm && !String(val).toLowerCase().includes(searchTerm)) return;
 
         let isChecked = currentModalSelectedSet.has(val);
         let itemDiv = document.createElement('label');
@@ -1052,7 +1120,7 @@
 
     function selectAllFilterOptions(status) {
       const searchTerm = document.getElementById('filterSearchInput').value.toLowerCase().trim();
-      let visibleValues = currentHeaderUniqueValues.filter(val => !searchTerm || val.toLowerCase().includes(searchTerm));
+      let visibleValues = currentHeaderUniqueValues.filter(val => !searchTerm || String(val).toLowerCase().includes(searchTerm));
 
       visibleValues.forEach(val => {
         if (status) currentModalSelectedSet.add(val);
@@ -1137,36 +1205,6 @@
       renderTableData();
     }
 
-    // EXPORT TO CSV (WITH BOM UTF-8 & EXACT NEWLINES FIX)
-    function exportToCSV() {
-      if (filteredTableData.length === 0) {
-        alert("Tidak ada data untuk di-export.");
-        return;
-      }
-
-      let csvContent = '\uFEFF';
-      csvContent += unifiedTableHeaders.map(h => `"${String(h).replace(/"/g, '""')}"`).join(',') + '\n';
-
-      filteredTableData.forEach(row => {
-        let rowStr = unifiedTableHeaders.map(h => {
-          let val = row[h] !== undefined && row[h] !== null ? String(row[h]) : '-';
-          return `"${val.replace(/"/g, '""')}"`;
-        }).join(',');
-        csvContent += rowStr + '\n';
-      });
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const todayStr = new Date().toISOString().slice(0, 10);
-      
-      a.setAttribute('href', url);
-      a.setAttribute('download', `Data_Santri_Export_${todayStr}.csv`);
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
     let toastTimeout = null;
     function showIosToast(rowObj, clickedHeader) {
       const toast = document.getElementById('iosToast');
@@ -1234,9 +1272,10 @@
       if (!fabMoved) openTableModal();
     }
 
-    // STATISTIK & VISUALISASI CHART (WITH DYNAMIC HEIGHT & COMPLETE 100% DATA ABSORPTION)
+    // STATISTIK & VISUALISASI CHART
     let currentChart = null;
     let activeStatsTab = 'status';
+    let activeStatusFilter = 'ALL';
 
     function openStatsModal() {
       if (unifiedTableData.length === 0) prepareUnifiedTableData();
@@ -1262,6 +1301,12 @@
       document.getElementById('statsModal').classList.add('hidden');
     }
 
+    function filterByStatusCard(status) {
+      activeStatusFilter = status;
+      renderSummaryWidgets();
+      switchStatsTab(activeStatsTab || 'domisili');
+    }
+
     function renderSummaryWidgets() {
       const widgetContainer = document.getElementById('statsSummaryWidget');
       const totalSantri = unifiedTableData.length;
@@ -1270,20 +1315,24 @@
       let mualimCount = Object.keys(DB.mualimMap || {}).length;
       let tahfidzCount = Object.keys(DB.tahfidzMap || {}).length;
 
+      const getStyle = (st) => activeStatusFilter === st 
+        ? 'ring-2 ring-emerald-500 scale-95 shadow-md opacity-100' 
+        : 'hover:scale-105 opacity-80 hover:opacity-100';
+
       widgetContainer.innerHTML = `
-        <div class="bg-white rounded-2xl p-2 border border-slate-200 shadow-sm text-center">
+        <div onclick="filterByStatusCard('ALL')" class="bg-white rounded-2xl p-2 border border-slate-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('ALL')}">
           <span class="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Total</span>
           <span class="text-sm font-extrabold text-slate-800">${totalSantri.toLocaleString('id-ID')}</span>
         </div>
-        <div class="bg-amber-50 rounded-2xl p-2 border border-amber-200 shadow-sm text-center">
+        <div onclick="filterByStatusCard('MUTAALLIM')" class="bg-amber-50 rounded-2xl p-2 border border-amber-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('MUTAALLIM')}">
           <span class="text-[9px] font-bold text-amber-700 block uppercase tracking-wider">Muta'allim</span>
           <span class="text-sm font-extrabold text-amber-900">${mutaallimCount}</span>
         </div>
-        <div class="bg-blue-50 rounded-2xl p-2 border border-blue-200 shadow-sm text-center">
+        <div onclick="filterByStatusCard('MUALIM')" class="bg-blue-50 rounded-2xl p-2 border border-blue-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('MUALIM')}">
           <span class="text-[9px] font-bold text-blue-700 block uppercase tracking-wider">Mu'allim</span>
           <span class="text-sm font-extrabold text-blue-900">${mualimCount}</span>
         </div>
-        <div class="bg-emerald-50 rounded-2xl p-2 border border-emerald-200 shadow-sm text-center">
+        <div onclick="filterByStatusCard('TAHFIDZ')" class="bg-emerald-50 rounded-2xl p-2 border border-emerald-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('TAHFIDZ')}">
           <span class="text-[9px] font-bold text-emerald-700 block uppercase tracking-wider">Tahfidz</span>
           <span class="text-sm font-extrabold text-emerald-900">${tahfidzCount}</span>
         </div>
@@ -1320,7 +1369,7 @@
 
     function switchStatsTab(tabName) {
       activeStatsTab = tabName;
-      document.getElementById('statsColumnSelect').value = "";
+      const colSelect = document.getElementById('statsColumnSelect'); if (colSelect) colSelect.value = "";
 
       const btnStatus = document.getElementById('tabBtnStatus');
       const btnDomisili = document.getElementById('tabBtnDomisili');
@@ -1342,6 +1391,11 @@
     }
 
     function getFreshChartContext(customHeightPx) {
+      if (currentChart) {
+        currentChart.destroy();
+        currentChart = null;
+      }
+
       const wrapper = document.getElementById('chartCanvasWrapper');
       if (customHeightPx) {
         wrapper.style.height = customHeightPx + 'px';
@@ -1350,10 +1404,6 @@
       }
       wrapper.innerHTML = '<canvas id="statsChartCanvas"></canvas>';
       
-      if (currentChart) {
-        currentChart.destroy();
-        currentChart = null;
-      }
       return document.getElementById('statsChartCanvas').getContext('2d');
     }
 
@@ -1414,8 +1464,27 @@
 
     function renderBarChartForHeader(headerKey, footerEl, titleCaption) {
       let counts = {};
-      unifiedTableData.forEach(r => {
+      const idKey = DB.headersUtama[0] || 'ID PPS';
+      
+      let filteredData = unifiedTableData.filter(r => {
+        let idPps = r[idKey] || r['ID PPS'] || '';
+        if (activeStatusFilter === 'MUTAALLIM') return DB.mutaallimMap.hasOwnProperty(idPps);
+        if (activeStatusFilter === 'MUALIM') return DB.mualimMap.hasOwnProperty(idPps);
+        if (activeStatusFilter === 'TAHFIDZ') return DB.tahfidzMap.hasOwnProperty(idPps);
+        return true;
+      });
+
+      filteredData.forEach(r => {
         let val = r[headerKey] || '-';
+
+        if (headerKey.toUpperCase() === 'DOMISILI' && val !== '-') {
+          val = val.split(/[\-_]/)[0].trim();
+        }
+
+        if (headerKey.toUpperCase() === 'KELAS' && val !== '-') {
+          val = val.replace(/\s+[A-Za-z0-9]{1,2}$/i, '').replace(/[\-_].*$/, '').trim();
+        }
+
         counts[val] = (counts[val] || 0) + 1;
       });
 
@@ -1423,7 +1492,6 @@
       let labels = sorted.map(item => item[0]);
       let dataValues = sorted.map(item => item[1]);
 
-      // SOLUSI GRAFIK GEPENG: Hitung tinggi canvas secara dinamis berdasarkan jumlah kategori
       let dynamicHeight = Math.max(260, labels.length * 24);
       const ctx = getFreshChartContext(dynamicHeight);
 
@@ -1461,73 +1529,5 @@
       footerEl.innerHTML = `${titleCaption} (Total ${labels.length} Kategori Terdeteksi)`;
     }
   </script>
-
-<!-- id-pps-copy-script -->
-<script>
-(function() {
-  function pasangTombolSalinID() {
-    // Cari teks yang khusus mengandung "ID PPS" dan angka
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-    let node;
-    const targetElements = [];
-
-    while (node = walker.nextNode()) {
-      const val = node.nodeValue;
-      // Filter ketat: Harus ada kata 'ID PPS' dan ada deretan angka
-      if (val && val.includes("ID PPS") && /\d+/.test(val) && !val.includes("Ketik minimal")) {
-        const parent = node.parentElement;
-        if (parent && !parent.querySelector('.btn-salin-id')) {
-          targetElements.push(parent);
-        }
-      }
-    }
-
-    targetElements.forEach(parent => {
-      // Ambil HANYA deretan angka ID (misal: 14360213)
-      const match = parent.innerText.match(/\d+/);
-      if (!match) return;
-      const idNomor = match[0];
-
-      // Buat tombol salin kecil
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "btn-salin-id";
-      btn.innerHTML = "📋 Salin";
-      btn.style.cssText = "margin-left: 6px; padding: 2px 6px; font-size: 10px; font-weight: bold; background-color: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-block; vertical-align: middle;";
-
-      btn.onclick = function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-
-        // Salin HANYA angka ID-nya
-        navigator.clipboard.writeText(idNomor).then(() => {
-          const oldText = btn.innerHTML;
-          btn.innerHTML = "✓ Tersalin";
-          btn.style.backgroundColor = "#16a34a";
-          setTimeout(() => {
-            btn.innerHTML = oldText;
-            btn.style.backgroundColor = "#059669";
-          }, 1200);
-        }).catch(() => {
-          alert("Gagal menyalin ID PPS.");
-        });
-      };
-
-      parent.appendChild(btn);
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', pasangTombolSalinID);
-  } else {
-    pasangTombolSalinID();
-  }
-
-  // Pantau jika ada data pencarian baru yang muncul
-  const observer = new MutationObserver(pasangTombolSalinID);
-  observer.observe(document.body, { childList: true, subtree: true });
-})();
-</script>
-
 </body>
 </html>
