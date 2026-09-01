@@ -2,18 +2,23 @@
 <html lang="id" class="h-full overflow-hidden">
 <head>
   <meta charset="UTF-8">
-  <meta name="google-site-verification" content="a8VwvtD9Ecw8vkh2b7S1wVIPnScssr8ODeT2SKiuTmU" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Pencarian Data Santri</title>
+  
+  <!-- Tailwind CSS & Chart.js CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <style>
-    /* ANTI PULL-TO-REFRESH */
+    /* ANTI PULL-TO-REFRESH & iOS SMOOTH SCROLL */
     html, body {
       height: 100%;
       width: 100%;
       overflow: hidden;
       overscroll-behavior: none;
       touch-action: none;
+      background-color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
     #scrollableArea {
@@ -24,30 +29,17 @@
       touch-action: pan-y;
     }
 
-    /* ANIMASI BOUNCE UNTUK TABEL MODAL */
-    @keyframes bounceIn {
-      0% { opacity: 0; transform: scale(0.3); }
-      50% { opacity: 1; transform: scale(1.03); }
-      70% { transform: scale(0.97); }
-      100% { opacity: 1; transform: scale(1); }
-    }
-    .animate-bounce-modal {
-      animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-    }
-
-    /* ANIMASI POP-UP EFEK IOS SLIDE/SCALE */
+    /* iOS POPUP & BOUNCE ANIMATION */
     @keyframes iosPop {
-      0% { opacity: 0; transform: scale(0.88) translateY(20px); }
+      0% { opacity: 0; transform: scale(0.92) translateY(12px); }
       100% { opacity: 1; transform: scale(1) translateY(0); }
     }
     .animate-ios-modal {
-      animation: iosPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: iosPop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    /* ANIMASI FLIP CARD */
-    .card-perspective {
-      perspective: 1000px;
-    }
+    /* FLIP CARD ANIMATION */
+    .card-perspective { perspective: 1000px; }
     .card-flip-container {
       transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
       transform-style: preserve-3d;
@@ -57,89 +49,161 @@
     .flip-in-left { transform: rotateY(70deg) scale(0.92); opacity: 0; }
     .flip-out-right { transform: rotateY(70deg) scale(0.92); opacity: 0; }
     .flip-in-right { transform: rotateY(-70deg) scale(0.92); opacity: 0; }
+
+    /* CUSTOM SCROLLBAR iOS STYLE */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* MEMASTIKAN TEKS BISA DI-COPY */
+    .selectable-text {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+    }
   </style>
 </head>
-<body class="bg-slate-100 font-sans text-slate-800 relative">
+<body class="text-slate-800 relative bg-slate-100">
 
-  <!-- NOTIFIKASI ALA IPHONE -->
-  <div id="iosToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[90] max-w-md w-[90%] bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-2xl rounded-2xl p-4 transition-all duration-300 -translate-y-24 opacity-0 pointer-events-none">
+  <!-- TOAST NOTIFIKASI ALA iOS -->
+  <div id="iosToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[110] max-w-md w-[90%] bg-white/95 backdrop-blur-2xl border border-white/80 shadow-2xl rounded-2xl p-4 transition-all duration-300 -translate-y-24 opacity-0 pointer-events-none">
     <div class="flex justify-between items-center mb-1">
       <span id="toastPps" class="font-bold text-emerald-700 text-xs tracking-wider">ID PPS: -</span>
-      <span class="text-[10px] text-slate-400 font-medium">Info Santri</span>
+      <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Info Santri</span>
     </div>
-    <h4 id="toastNama" class="font-bold text-slate-800 text-sm mb-2">Nama Santri</h4>
-    <div id="toastDetail" class="text-slate-600 bg-slate-100/80 p-2.5 rounded-xl border border-slate-200/60 font-medium text-xs"></div>
+    <h4 id="toastNama" class="font-bold text-slate-800 text-sm mb-1.5 selectable-text">Nama Santri</h4>
+    <div id="toastDetail" class="text-slate-600 bg-slate-100/90 p-2.5 rounded-xl border border-slate-200/50 font-medium text-xs selectable-text"></div>
   </div>
 
-  <!-- TOMBOL IKON MELAYANG (DRAGGABLE FAB) -->
-  <button id="fabTable" onclick="handleFabClick(event)" class="fixed bottom-6 right-6 z-40 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white p-3.5 rounded-2xl shadow-2xl flex items-center justify-center transition-transform touch-none cursor-move border border-emerald-400/40">
+  <!-- TOMBOL IKON MELAYANG (FAB TABEL) -->
+  <button id="fabTable" onclick="handleFabClick(event)" class="fixed bottom-6 right-6 z-40 bg-emerald-600/90 hover:bg-emerald-600 active:scale-95 text-white p-4 rounded-full shadow-2xl backdrop-blur-lg flex items-center justify-center transition-all border border-emerald-400/40">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M3 18h18M3 6h18"></path>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 10h18M3 14h18M3 18h18M3 6h18"></path>
     </svg>
   </button>
 
-  <!-- Wrapper Scroll Utama -->
+  <!-- CONTAINER SCROLL UTAMA -->
   <div id="scrollableArea" class="p-4 md:p-8">
-    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-6 my-2 border border-slate-200">
+    <div class="max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl p-6 border border-slate-200 my-2">
       
-      <!-- Top Action Bar -->
-      <div class="flex justify-between items-center mb-4">
-        <span id="cacheBadge" class="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-semibold hidden">
-          ⚡ Data Tersimpan (Instan)
-        </span>
-        <button onclick="forceRefreshData()" class="text-xs text-slate-400 hover:text-emerald-600 transition flex items-center gap-1 ml-auto">
-          🔄 Sync Data
+      <!-- TOP ACTION BAR -->
+      <div class="flex justify-between items-center gap-2 mb-6">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <button onclick="openStatsModal()" title="Statistik Santri" class="text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
+            📊 <span class="hidden sm:inline">Statistik Santri</span>
+          </button>
+          <button onclick="toggleFilterFavorit()" id="btnFavoritFilter" title="Favorit" class="text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1 shadow-sm active:scale-95">
+            ⭐ <span class="hidden sm:inline">Favorit</span> (<span id="favCountBadge">0</span>)
+          </button>
+          <span id="cacheBadge" class="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-full font-semibold border border-slate-200/60 hidden">
+            ⚡ <span class="hidden sm:inline">Ter-cache</span>
+          </span>
+        </div>
+        
+        <button onclick="forceRefreshData()" title="Sync Data" class="text-xs text-slate-500 hover:text-emerald-600 transition flex items-center gap-1 bg-slate-100/80 px-3 py-1.5 rounded-full font-medium border border-slate-200/40 active:scale-95">
+          🔄 <span class="hidden sm:inline">Sync Data</span>
         </button>
       </div>
 
-      <!-- Title -->
-      <h1 class="text-2xl font-bold text-center text-emerald-700 tracking-tight">Pencarian Data Santri</h1>
-      <p class="text-center text-slate-400 mb-5 text-xs">Ketik minimal 3 karakter ID PPS atau Nama Santri</p>
+      <!-- TITLE HEADER -->
+      <div class="text-center mb-6 select-none">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">Pencarian Data Santri</h1>
+        <p class="text-slate-400 mt-1 text-xs font-medium">Ketik minimal 3 karakter ID PPS atau Nama Santri</p>
+      </div>
 
-      <!-- Search Input -->
-      <div class="flex gap-2 mb-2">
+      <!-- SEARCH INPUT (iOS STYLE) -->
+      <div class="relative flex items-center mb-4">
         <input type="text" id="searchInput" placeholder="Cari ID PPS atau Nama..." 
-               class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm disabled:bg-slate-50 text-sm" 
+               class="w-full pl-4 pr-24 py-3.5 bg-slate-100 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:bg-white text-sm transition shadow-inner disabled:opacity-60 selectable-text" 
                onkeyup="handleKeyPress(event)" disabled>
         <button onclick="lakukanPencarianFast(true)" id="searchBtn" disabled
-                class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-emerald-700 transition shadow-sm disabled:opacity-50">
+                class="absolute right-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-semibold text-xs transition shadow-md disabled:opacity-50 active:scale-95">
           Cari
         </button>
       </div>
 
-      <!-- Indicator Loading -->
+      <!-- LOADING INDICATOR -->
       <div id="loading" class="text-center py-6 text-emerald-600 font-semibold flex items-center justify-center gap-2">
         <svg class="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <span id="loadingText" class="text-xs">Memuat database...</span>
+        <span id="loadingText" class="text-xs text-slate-500">Memuat database santri...</span>
       </div>
 
-      <!-- Result Container -->
+      <!-- CONTAINER HASIL PENCARIAN -->
       <div id="infoMessage" class="mt-4"></div>
       <div id="resultContainer" class="mt-3"></div>
     </div>
   </div>
 
-  <!-- MODAL TABEL DATABASE SANTRI LENGKAP -->
-  <div id="tableModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 hidden">
-    <div id="tableModalCard" class="bg-white rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+  <!-- MODAL STATISTIK & DASHBOARD (SOLVED OVERLAY & DYNAMIC HEIGHT CHART) -->
+  <div id="statsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-3 sm:p-4 hidden">
+    <div id="statsModalCard" class="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden relative">
+      
       <!-- Modal Header -->
-      <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/80">
+      <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
         <div>
-          <h2 class="text-base sm:text-lg font-bold text-emerald-800 flex items-center gap-2">
-            📊 Database Santri Lengkap
+          <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+            📊 Analytics & Statistik Santri
           </h2>
-          <p class="text-[11px] text-slate-500">Gabungan seluruh data dari sistem spreadsheet</p>
+          <p class="text-[11px] text-slate-400">Visualisasi 100% database tanpa pembatasan</p>
         </div>
-        <button onclick="closeTableModal()" class="text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+        <button onclick="closeStatsModal()" class="text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">✕</button>
       </div>
 
-      <!-- Filter Controls & Stats Bar -->
-      <div class="px-4 py-2.5 bg-slate-100/60 border-b border-slate-200 flex flex-wrap justify-between items-center gap-2 text-xs">
+      <!-- iOS Widget Summary Cards -->
+      <div id="statsSummaryWidget" class="grid grid-cols-4 gap-2 px-4 pt-3 pb-2 bg-slate-50 border-b border-slate-100">
+      </div>
+
+      <!-- Controls & Dynamic Column Selector -->
+      <div class="px-4 py-2.5 bg-slate-100 border-b border-slate-200/60 flex flex-col sm:flex-row gap-2 justify-between items-center">
+        <div class="w-full sm:w-auto grid grid-cols-3 gap-1 bg-slate-200/80 p-1 rounded-xl text-center text-xs font-semibold text-slate-600">
+          <button id="tabBtnStatus" onclick="switchStatsTab('status')" class="py-1.5 px-3 rounded-lg bg-white shadow text-emerald-700 transition font-bold">Status</button>
+          <button id="tabBtnDomisili" onclick="switchStatsTab('domisili')" class="py-1.5 px-3 rounded-lg hover:text-slate-900 transition">Domisili</button>
+          <button id="tabBtnKelas" onclick="switchStatsTab('kelas')" class="py-1.5 px-3 rounded-lg hover:text-slate-900 transition">Kelas</button>
+        </div>
+        
+        <div class="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-2 text-xs">
+          <span class="text-slate-400 font-medium text-[11px]">Kolom Lain:</span>
+          <select id="statsColumnSelect" onchange="onStatsColumnSelectChange(this.value)" class="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </select>
+        </div>
+      </div>
+
+      <!-- Dynamic Chart Scroll Container -->
+      <div class="p-4 flex-grow overflow-y-auto flex flex-col items-center justify-start min-h-[300px]">
+        <div id="chartCanvasWrapper" class="w-full relative min-h-[260px] flex items-center justify-center">
+          <canvas id="statsChartCanvas"></canvas>
+        </div>
+        <div id="statsChartFooter" class="mt-4 text-center text-xs text-slate-500 font-medium pb-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TABEL DATABASE SANTRI LENGKAP -->
+  <div id="tableModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-2 sm:p-4 hidden">
+    <div id="tableModalCard" class="bg-white rounded-3xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+            📋 Database Santri Lengkap
+          </h2>
+          <p class="text-[11px] text-slate-400">Data gabungan seluruh sheet spreadsheet</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="exportToCSV()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow-sm active:scale-95">
+            📥 Export CSV
+          </button>
+          <button onclick="closeTableModal()" class="text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">✕</button>
+        </div>
+      </div>
+
+      <!-- Filter Controls Bar -->
+      <div class="px-4 py-2.5 bg-slate-100 border-b border-slate-200 flex flex-wrap justify-between items-center gap-2 text-xs">
         <span id="tableTotalCount" class="text-slate-600 font-semibold">Menampilkan 0 data</span>
-        <button onclick="resetTableFilters()" class="text-emerald-700 hover:text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg font-medium text-[11px] transition">
+        <button onclick="resetTableFilters()" class="text-emerald-700 hover:text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl font-semibold text-[11px] transition shadow-sm active:scale-95">
           🔄 Reset Filter
         </button>
       </div>
@@ -148,23 +212,23 @@
       <div class="flex-grow overflow-auto p-2 sm:p-4">
         <table class="w-full text-left text-xs border-collapse">
           <thead>
-            <tr id="tableHeaderRow" class="bg-slate-100/80 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10 backdrop-blur-sm">
+            <tr id="tableHeaderRow" class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10">
             </tr>
           </thead>
-          <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700">
+          <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700 selectable-text">
           </tbody>
         </table>
       </div>
 
-      <!-- Modal Footer -->
+      <!-- Modal Footer Pagination -->
       <div class="p-3 border-t border-slate-200 bg-slate-50 flex justify-between items-center gap-2 text-xs">
-        <button id="btnPrevPage" onclick="changeTablePage(-1)" class="px-4 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold disabled:opacity-40">
+        <button id="btnPrevPage" onclick="changeTablePage(-1)" class="px-4 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 font-semibold disabled:opacity-40">
           « SBLM
         </button>
         <span id="tablePageInfo" class="font-semibold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
           Halaman 1
         </span>
-        <button id="btnNextPage" onclick="changeTablePage(1)" class="px-4 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold disabled:opacity-40">
+        <button id="btnNextPage" onclick="changeTablePage(1)" class="px-4 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 font-semibold disabled:opacity-40">
           NEXT »
         </button>
       </div>
@@ -172,22 +236,22 @@
   </div>
 
   <!-- MODAL POPUP FILTER -->
-  <div id="filterModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[80] flex items-center justify-center p-4 hidden">
-    <div id="filterModalCard" class="bg-white rounded-2xl max-w-sm w-full p-4 shadow-2xl border border-slate-200 flex flex-col max-h-[85vh]">
+  <div id="filterModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4 hidden">
+    <div id="filterModalCard" class="bg-white rounded-3xl max-w-sm w-full p-4 shadow-2xl border border-slate-200 flex flex-col max-h-[85vh]">
       <div class="flex justify-between items-center mb-1">
-        <h3 id="filterModalTitle" class="text-sm font-bold text-emerald-800">Filter</h3>
+        <h3 id="filterModalTitle" class="text-sm font-bold text-slate-800">Filter</h3>
         <button onclick="closeFilterModal()" class="text-slate-400 hover:text-slate-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">✕</button>
       </div>
-      <p class="text-[11px] text-slate-400 mb-3">Pilih daftar unik yang ingin ditampilkan</p>
+      <p class="text-[11px] text-slate-400 mb-3">Pilih opsi yang ingin ditampilkan</p>
       
-      <input type="text" id="filterSearchInput" oninput="onFilterSearchInput()" placeholder="Cari dalam pilihan..." class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-2">
+      <input type="text" id="filterSearchInput" oninput="onFilterSearchInput()" placeholder="Cari dalam pilihan..." class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-2 selectable-text">
       
       <div class="flex justify-between items-center text-[11px] px-1 mb-2">
         <button type="button" onclick="selectAllFilterOptions(true)" class="text-emerald-600 hover:underline font-semibold">✓ Semua</button>
         <button type="button" onclick="selectAllFilterOptions(false)" class="text-rose-500 hover:underline font-semibold">✕ Hapus</button>
       </div>
       
-      <div id="filterOptionList" class="flex-grow overflow-y-auto border border-slate-100 rounded-xl p-2 space-y-1.5 max-h-60 text-xs">
+      <div id="filterOptionList" class="flex-grow overflow-y-auto border border-slate-100 rounded-xl p-2 space-y-1 max-h-60 text-xs">
       </div>
       
       <div class="flex gap-2 mt-4 pt-2 border-t border-slate-100">
@@ -198,17 +262,17 @@
   </div>
 
   <!-- MODAL POPUP FOTO SANTRI -->
-  <div id="photoModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-    <div id="photoModalCard" class="bg-white/95 backdrop-blur-xl rounded-2xl max-w-lg w-full p-4 relative shadow-2xl border border-slate-200/80 overflow-hidden flex flex-col items-center">
+  <div id="photoModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 hidden">
+    <div id="photoModalCard" class="bg-white rounded-3xl max-w-lg w-full p-5 relative shadow-2xl border border-slate-200 overflow-hidden flex flex-col items-center">
       <button onclick="closePhotoModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center font-bold transition z-10">
         ✕
       </button>
 
-      <h3 id="modalName" class="text-base font-bold text-slate-800 text-center pr-6 mb-0.5">Foto Santri</h3>
-      <p id="modalPps" class="text-xs text-slate-400 text-center"></p>
-      <p id="modalDomisili" class="text-xs text-emerald-600 font-medium mb-3 text-center"></p>
+      <h3 id="modalName" class="text-base font-bold text-slate-800 text-center pr-6 mb-0.5 selectable-text">Foto Santri</h3>
+      <p id="modalPps" class="text-xs text-slate-400 text-center selectable-text"></p>
+      <p id="modalDomisili" class="text-xs text-emerald-600 font-semibold mb-3 text-center selectable-text"></p>
 
-      <div class="w-full h-96 bg-slate-100/70 rounded-xl overflow-hidden flex items-center justify-center relative border border-slate-200/70">
+      <div class="w-full h-96 bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center relative border border-slate-200">
         <div id="photoLoading" class="flex flex-col items-center gap-2 text-emerald-600">
           <svg class="animate-spin h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -225,7 +289,7 @@
         </div>
       </div>
 
-      <button onclick="closePhotoModal()" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-2 rounded-xl font-medium transition text-xs">
+      <button onclick="closePhotoModal()" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 rounded-xl font-semibold transition text-xs">
         Tutup
       </button>
     </div>
@@ -233,6 +297,17 @@
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzV_l5rAXgnapi2c3ZH90WOusrHgN-Ny9wjaFJ9tczCl1mkz1pURw_sZUYhEF4YY6byRg/exec";
+
+    // XSS Protection Utility
+    function escapeHTML(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
 
     const scrollArea = document.getElementById('scrollableArea');
     let startY = 0;
@@ -255,8 +330,13 @@
       tahfidzMap: {}
     };
 
+    let favoritedSet = new Set();
+    let isFavoritFilterActive = false;
+
     window.onload = function() {
       initFabDrag();
+      loadFavoritedFromStorage();
+
       const localData = localStorage.getItem('SANTRI_DB_CACHE');
       if (localData) {
         try {
@@ -270,13 +350,79 @@
       fetchDataFromServer(true);
     };
 
+    function loadFavoritedFromStorage() {
+      try {
+        const saved = localStorage.getItem('SANTRI_FAVORITES');
+        if (saved) favoritedSet = new Set(JSON.parse(saved));
+      } catch(e) {
+        favoritedSet = new Set();
+      }
+      updateFavCountBadge();
+    }
+
+    function saveFavoritedToStorage() {
+      try {
+        localStorage.setItem('SANTRI_FAVORITES', JSON.stringify(Array.from(favoritedSet)));
+      } catch(e){}
+      updateFavCountBadge();
+    }
+
+    function updateFavCountBadge() {
+      document.getElementById('favCountBadge').innerText = favoritedSet.size;
+    }
+
+    function toggleFavorite(idPps, e) {
+      if(e) e.stopPropagation();
+      if (favoritedSet.has(idPps)) {
+        favoritedSet.delete(idPps);
+      } else {
+        favoritedSet.add(idPps);
+      }
+      saveFavoritedToStorage();
+      renderCurrentCard();
+    }
+
+    function toggleFilterFavorit() {
+      isFavoritFilterActive = !isFavoritFilterActive;
+      const btn = document.getElementById('btnFavoritFilter');
+      if (isFavoritFilterActive) {
+        btn.className = "text-xs font-semibold bg-amber-500 text-white border border-amber-600 px-3.5 py-1.5 rounded-full transition flex items-center gap-1 shadow-sm active:scale-95";
+        lakukanPencarianFavorit();
+      } else {
+        btn.className = "text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/60 px-3.5 py-1.5 rounded-full transition flex items-center gap-1 shadow-sm active:scale-95";
+        document.getElementById('searchInput').value = '';
+        lakukanPencarianFast(true);
+      }
+    }
+
+    function lakukanPencarianFavorit() {
+      const container = document.getElementById('resultContainer');
+      const infoMsg = document.getElementById('infoMessage');
+      container.innerHTML = '';
+      infoMsg.innerHTML = '';
+
+      searchResults = DB.dataUtama.filter(row => {
+        const idPps = row[0] ? String(row[0]).trim() : '';
+        return favoritedSet.has(idPps);
+      });
+
+      currentCardIndex = 0;
+      if (searchResults.length === 0) {
+        container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-2xl">Belum ada santri yang ditandai sebagai favorit ⭐.</div>`;
+        return;
+      }
+      renderCurrentCard();
+    }
+
     function fetchDataFromServer(showLoadingUI) {
       if (showLoadingUI) document.getElementById('loading').classList.remove('hidden');
 
       fetch(API_URL)
         .then(response => response.json())
         .then(res => {
-          localStorage.setItem('SANTRI_DB_CACHE', JSON.stringify(res));
+          try {
+            localStorage.setItem('SANTRI_DB_CACHE', JSON.stringify(res));
+          } catch(e){}
           initDatabase(res, false);
         })
         .catch(err => {
@@ -293,8 +439,8 @@
     }
 
     function initDatabase(res, isFromCache) {
-      DB.headersUtama = res.headersUtama;
-      DB.dataUtama = res.dataUtama;
+      DB.headersUtama = res.headersUtama || [];
+      DB.dataUtama = res.dataUtama || [];
       DB.mutaallimMap = res.mutaallimMap || {};
       DB.mualimMap = res.mualimMap || {};
       DB.tahfidzMap = res.tahfidzMap || {};
@@ -306,6 +452,7 @@
       if (isFromCache) document.getElementById('cacheBadge').classList.remove('hidden');
 
       prepareUnifiedTableData();
+      populateStatsColumnSelector();
     }
 
     let searchTimeout = null;
@@ -322,6 +469,9 @@
     }
 
     function lakukanPencarianFast(isForce) {
+      isFavoritFilterActive = false;
+      document.getElementById('btnFavoritFilter').className = "text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/60 px-3.5 py-1.5 rounded-full transition flex items-center gap-1 shadow-sm active:scale-95";
+
       const inputEl = document.getElementById('searchInput');
       const keyword = inputEl.value.toLowerCase().trim();
       const container = document.getElementById('resultContainer');
@@ -339,13 +489,13 @@
 
       setTimeout(() => {
         searchResults = DB.dataUtama.filter(row => {
-          const idPps = row[0] ? row[0].toLowerCase().trim() : '';
-          const nama = row[1] ? row[1].toLowerCase().trim() : '';
+          const idPps = row[0] ? String(row[0]).toLowerCase().trim() : '';
+          const nama = row[1] ? String(row[1]).toLowerCase().trim() : '';
           return idPps.includes(keyword) || nama.includes(keyword);
         });
 
         if (searchResults.length === 0) {
-          container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-xl">Data santri tidak ditemukan.</div>`;
+          container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-2xl">Data santri tidak ditemukan.</div>`;
           return;
         }
 
@@ -363,15 +513,16 @@
       const total = searchResults.length;
 
       infoMsg.innerHTML = `
-        <div class="flex justify-between items-center text-xs text-slate-500 mb-3 px-1">
+        <div class="flex justify-between items-center text-xs text-slate-500 mb-3 px-1 select-none">
           <span>Ditemukan <strong>${total}</strong> data</span>
-          <span class="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold border border-emerald-200">
+          <span class="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold border border-emerald-200/80">
              Kartu ${currentCardIndex + 1} dari ${total}
           </span>
         </div>`;
 
-      const idPps = row[0] ? row[0].trim() : '';
-      const nama = row[1] ? row[1].trim() : 'Tanpa Nama';
+      const idPps = row[0] ? String(row[0]).trim() : '';
+      const nama = row[1] ? String(row[1]).trim() : 'Tanpa Nama';
+      const isFav = favoritedSet.has(idPps);
 
       const indexKontak = DB.headersUtama.findIndex(header => header.toUpperCase() === "KONTAK WALI");
       let infoKontakWali = (indexKontak !== -1) ? row[indexKontak] : "";
@@ -385,9 +536,9 @@
       const isTahfidz = DB.tahfidzMap.hasOwnProperty(idPps);
 
       let statusBadges = [];
-      if (isMutaallim) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200">Muta'allim</span>`);
-      if (isMualim) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-200">Mu'allim</span>`);
-      if (isTahfidz) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">Tahfidz</span>`);
+      if (isMutaallim) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-100/80 text-amber-800 border border-amber-200">Muta'allim</span>`);
+      if (isMualim) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-100/80 text-blue-800 border border-blue-200">Mu'allim</span>`);
+      if (isTahfidz) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100/80 text-emerald-800 border border-emerald-200">Tahfidz</span>`);
       if (statusBadges.length === 0) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-600 border border-slate-200">Santri Regular</span>`);
 
       let detailUtamaHtml = '';
@@ -395,37 +546,42 @@
         let namaHeader = header.toUpperCase();
         if (namaHeader === "FOTO" || namaHeader === "KONTAK WALI" || namaHeader === "WA" || idx === 0 || idx === 1) return;
 
-        let val = (row[idx] !== "" && row[idx] !== null && row[idx] !== undefined) ? row[idx] : "-";
+        let val = (row[idx] !== "" && row[idx] !== null && row[idx] !== undefined) ? escapeHTML(row[idx]) : "-";
         detailUtamaHtml += `
           <div class="py-1.5 border-b border-slate-100 flex justify-between items-center text-xs">
-            <span class="text-slate-400 font-medium">${header}</span>
-            <span class="text-slate-700 font-semibold text-right">${val}</span>
+            <span class="text-slate-400 font-medium">${escapeHTML(header)}</span>
+            <span class="text-slate-700 font-semibold text-right selectable-text">${val}</span>
           </div>`;
       });
 
       let statusSectionsHtml = '';
-      if (isMutaallim) statusSectionsHtml += buildExtraCardMinimal("Muta'allim", DB.mutaallimMap[idPps], 'bg-amber-50/60 border-amber-100 text-amber-900');
-      if (isMualim) statusSectionsHtml += buildExtraCardMinimal("Mu'allim", DB.mualimMap[idPps], 'bg-blue-50/60 border-blue-100 text-blue-900');
-      if (isTahfidz) statusSectionsHtml += buildExtraCardMinimal("Tahfidz", DB.tahfidzMap[idPps], 'bg-emerald-50/60 border-emerald-100 text-emerald-900');
+      if (isMutaallim) statusSectionsHtml += buildExtraCardMinimal("Muta'allim", DB.mutaallimMap[idPps], 'bg-amber-50 border-amber-100 text-amber-900');
+      if (isMualim) statusSectionsHtml += buildExtraCardMinimal("Mu'allim", DB.mualimMap[idPps], 'bg-blue-50 border-blue-100 text-blue-900');
+      if (isTahfidz) statusSectionsHtml += buildExtraCardMinimal("Tahfidz", DB.tahfidzMap[idPps], 'bg-emerald-50 border-emerald-100 text-emerald-900');
 
-      const navHint = total > 1 ? `<div class="text-[10px] text-slate-400 text-center mt-3 pt-2 border-t border-slate-100 flex items-center justify-center gap-1"><span>👈 Usap / ketuk tepi kartu untuk berpindah 👉</span></div>` : '';
+      const navHint = total > 1 ? `<div class="text-[10px] text-slate-400 text-center mt-3 pt-2 border-t border-slate-100 flex items-center justify-center gap-1 select-none"><span>👈 Usap / ketuk tepi kartu untuk berpindah 👉</span></div>` : '';
 
       const card = `
-      <div class="card-perspective relative select-none">
+      <div class="card-perspective relative">
         <div id="cardFlipWrapper" 
-             class="card-flip-container bg-white rounded-2xl border border-slate-200 shadow-md p-5 cursor-pointer"
+             class="card-flip-container bg-white rounded-2xl border border-slate-200 shadow-md p-5 cursor-pointer relative"
              ontouchstart="handleCardTouchStart(event)" 
              ontouchmove="handleCardTouchMove(event)" 
              ontouchend="handleCardTouchEnd(event)" 
              onclick="handleCardClick(event)">
           
-          <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+          <!-- Favorit Star Button -->
+          <button onclick="toggleFavorite('${escapeHTML(idPps)}', event)" class="absolute top-4 right-4 text-xl p-1 transition hover:scale-125 active:scale-90 z-10" title="Tandai Favorit">
+            ${isFav ? '⭐' : '☆'}
+          </button>
+
+          <div class="flex items-center gap-4 pb-4 border-b border-slate-100 pr-8">
             <div class="relative group cursor-pointer flex-shrink-0" onclick="openPhotoModal()">
               ${safeFotoUrl ? `
                 <img src="${safeFotoUrl}" alt="Thumbnail Santri" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm hover:scale-105 transition-transform">
               ` : `
                 <div class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xl border-2 border-emerald-200">
-                  ${nama.charAt(0).toUpperCase()}
+                  ${escapeHTML(nama.charAt(0).toUpperCase())}
                 </div>
               `}
               <div class="absolute inset-0 bg-slate-900/30 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
@@ -434,8 +590,8 @@
             </div>
 
             <div class="flex-grow min-w-0">
-              <span class="text-[10px] font-bold tracking-wider text-emerald-600 uppercase">ID PPS: ${idPps || '-'}</span>
-              <h2 class="text-lg font-bold text-slate-800 truncate leading-snug">${nama}</h2>
+              <span class="text-[10px] font-bold tracking-wider text-emerald-600 uppercase selectable-text">ID PPS: ${escapeHTML(idPps) || '-'}</span>
+              <h2 class="text-lg font-bold text-slate-800 truncate leading-snug selectable-text">${escapeHTML(nama)}</h2>
               <div class="flex flex-wrap gap-1 mt-1">${statusBadges.join(' ')}</div>
             </div>
           </div>
@@ -448,11 +604,11 @@
 
           <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-[11px] text-slate-400 font-medium mr-1">Hubungi:</span>
+              <span class="text-[11px] text-slate-400 font-medium mr-1 select-none">Hubungi:</span>
               ${buatTombolWA(infoKontakWali)}
             </div>
             <button onclick="openPhotoModal()" 
-                    class="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold underline">
+                    class="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold underline select-none">
               Lihat Foto &raquo;
             </button>
           </div>
@@ -550,7 +706,7 @@
     }
 
     function handleCardClick(e) {
-      if (e.target.closest('button, a, input, .group')) return;
+      if (e.target.closest('button, a, input, .group, .selectable-text')) return;
       const rect = e.currentTarget.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
       if (clickX > rect.width / 2) nextCard();
@@ -562,8 +718,8 @@
       for (let key in dataObj) {
         items += `
           <div class="py-1 flex justify-between text-[11px]">
-            <span class="opacity-70">${key}:</span>
-            <span class="font-semibold">${dataObj[key]}</span>
+            <span class="opacity-70">${escapeHTML(key)}:</span>
+            <span class="font-semibold selectable-text">${escapeHTML(dataObj[key])}</span>
           </div>`;
       }
 
@@ -580,7 +736,7 @@
 
     function getSafeImageUrl(rawUrl) {
       if (!rawUrl) return "";
-      let url = rawUrl.trim();
+      let url = String(rawUrl).trim();
       let fileId = "";
 
       let match1 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -599,11 +755,11 @@
     }
 
     function buatTombolWA(kolomKontak) {
-      if (!kolomKontak || kolomKontak.trim() === "") {
+      if (!kolomKontak || String(kolomKontak).trim() === "") {
         return `<span class="text-slate-300 text-xs">-</span>`;
       }
 
-      let nomorArray = kolomKontak.split(/[;,]+/);
+      let nomorArray = String(kolomKontak).split(/[;,]+/);
       let kumpulanTombol = '';
 
       nomorArray.forEach(nomor => {
@@ -629,8 +785,8 @@
     function openPhotoModal() {
       if (searchResults.length === 0 || !searchResults[currentCardIndex]) return;
       const santriPilih = searchResults[currentCardIndex];
-      const idPps = santriPilih[0] ? santriPilih[0].trim() : '-';
-      const nama = santriPilih[1] ? santriPilih[1].trim() : 'Tanpa Nama';
+      const idPps = santriPilih[0] ? String(santriPilih[0]).trim() : '-';
+      const nama = santriPilih[1] ? String(santriPilih[1]).trim() : 'Tanpa Nama';
 
       const domisiliIndex = DB.headersUtama.findIndex(header => header.trim().toUpperCase() === "DOMISILI");
       let domisiliVal = (domisiliIndex !== -1 && santriPilih[domisiliIndex]) ? santriPilih[domisiliIndex] : "";
@@ -686,16 +842,14 @@
       document.getElementById('photoModal').classList.add('hidden');
     }
 
-    // =========================================================
-    // VLOOKUP GABUNGAN SEMUA SHEET & POPUP FILTER EXCEL ALA IOS
-    // =========================================================
+    // DATABASE TABLE & FILTERING
     let unifiedTableHeaders = [];
     let unifiedTableData = [];
     let filteredTableData = [];
     let tableCurrentPage = 1;
     const tablePageSize = 25;
     
-    let activeColumnFilters = {}; // { [headerName]: Set of selected values }
+    let activeColumnFilters = {};
     let currentFilterHeader = '';
     let currentHeaderUniqueValues = [];
     let currentModalSelectedSet = new Set();
@@ -761,9 +915,9 @@
       const modal = document.getElementById('tableModal');
       const modalCard = document.getElementById('tableModalCard');
 
-      modalCard.classList.remove('animate-bounce-modal');
+      modalCard.classList.remove('animate-ios-modal');
       void modalCard.offsetWidth;
-      modalCard.classList.add('animate-bounce-modal');
+      modalCard.classList.add('animate-ios-modal');
 
       modal.classList.remove('hidden');
       renderTableHeaders();
@@ -783,13 +937,13 @@
         th.className = 'px-3 py-2 text-xs font-semibold tracking-wider text-slate-700 whitespace-nowrap select-none';
 
         let isFiltered = activeColumnFilters[header] && activeColumnFilters[header].size > 0;
-        let btnColorClass = isFiltered ? 'bg-emerald-600 text-white font-bold' : 'bg-white/80 text-slate-400 hover:text-slate-600 border-slate-200';
+        let btnColorClass = isFiltered ? 'bg-emerald-600 text-white font-bold' : 'bg-white text-slate-400 hover:text-slate-600 border-slate-200';
 
-        let content = `<div class="flex items-center justify-between gap-2"><span>${header}</span>`;
+        let content = `<div class="flex items-center justify-between gap-2"><span>${escapeHTML(header)}</span>`;
 
         if (idx > 1) {
           content += `
-            <button onclick="openFilterModal('${header.replace(/'/g, "\\'")}')" class="${btnColorClass} text-[10px] px-1.5 py-0.5 rounded-md border shadow-sm transition flex items-center gap-1">
+            <button onclick="openFilterModal('${header.replace(/'/g, "\'")}')" class="${btnColorClass} text-[10px] px-1.5 py-0.5 rounded-md border shadow-sm transition flex items-center gap-1">
               <span>▼</span>
             </button>`;
         }
@@ -800,7 +954,6 @@
       });
     }
 
-    // FILTER CASCADING & PEMILIHAN DINAMIS
     function openFilterModal(header) {
       currentFilterHeader = header;
       const modal = document.getElementById('filterModal');
@@ -810,7 +963,6 @@
       const searchInput = document.getElementById('filterSearchInput');
       searchInput.value = '';
 
-      // 1. CASCADING FILTER: Ambil opsi unik hanya dari baris yang lolos filter kolom lain
       let valSet = new Set();
       unifiedTableData.forEach(row => {
         let passesOtherFilters = true;
@@ -831,7 +983,6 @@
 
       currentHeaderUniqueValues = Array.from(valSet).sort();
 
-      // 2. Inisialisasi data centang
       if (activeColumnFilters[header]) {
         currentModalSelectedSet = new Set(
           Array.from(activeColumnFilters[header]).filter(v => valSet.has(v))
@@ -852,16 +1003,13 @@
       document.getElementById('filterModal').classList.add('hidden');
     }
 
-    // FUNGSI PENCARIAN DINAMIS DALAM MODAL (AUTOMATIC SYNC)
     function onFilterSearchInput() {
       const searchTerm = document.getElementById('filterSearchInput').value.toLowerCase().trim();
       
       if (searchTerm !== '') {
-        // Otomatis centang HANYA item yang cocok dengan kata kunci yang kamu ketik
         let matchingValues = currentHeaderUniqueValues.filter(val => val.toLowerCase().includes(searchTerm));
         currentModalSelectedSet = new Set(matchingValues);
       } else {
-        // Jika input dikosongkan, kembalikan ke filter aktif semula atau centang semua
         if (activeColumnFilters[currentFilterHeader]) {
           currentModalSelectedSet = new Set(
             Array.from(activeColumnFilters[currentFilterHeader]).filter(v => currentHeaderUniqueValues.includes(v))
@@ -885,10 +1033,10 @@
         let itemDiv = document.createElement('label');
         itemDiv.className = 'flex items-center gap-2 py-1 px-1.5 hover:bg-slate-50 rounded cursor-pointer text-xs text-slate-700 select-none';
         
-        let safeVal = val.replace(/"/g, '&quot;');
+        let safeVal = escapeHTML(val);
         itemDiv.innerHTML = `
           <input type="checkbox" value="${safeVal}" ${isChecked ? 'checked' : ''} onchange="toggleFilterOption(this)" class="filter-chk rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5">
-          <span class="truncate">${val}</span>
+          <span class="truncate">${safeVal}</span>
         `;
         container.appendChild(itemDiv);
       });
@@ -904,17 +1052,11 @@
 
     function selectAllFilterOptions(status) {
       const searchTerm = document.getElementById('filterSearchInput').value.toLowerCase().trim();
-      
-      let visibleValues = currentHeaderUniqueValues.filter(val => {
-        return !searchTerm || val.toLowerCase().includes(searchTerm);
-      });
+      let visibleValues = currentHeaderUniqueValues.filter(val => !searchTerm || val.toLowerCase().includes(searchTerm));
 
       visibleValues.forEach(val => {
-        if (status) {
-          currentModalSelectedSet.add(val);
-        } else {
-          currentModalSelectedSet.delete(val);
-        }
+        if (status) currentModalSelectedSet.add(val);
+        else currentModalSelectedSet.delete(val);
       });
 
       renderFilterOptionItems();
@@ -975,7 +1117,7 @@
 
       pageData.forEach(row => {
         const tr = document.createElement('tr');
-        tr.className = 'hover:bg-emerald-50/60 transition cursor-pointer active:bg-emerald-100/70';
+        tr.className = 'hover:bg-emerald-50 transition cursor-pointer active:bg-emerald-100';
 
         unifiedTableHeaders.forEach(header => {
           const td = document.createElement('td');
@@ -993,6 +1135,36 @@
     function changeTablePage(dir) {
       tableCurrentPage += dir;
       renderTableData();
+    }
+
+    // EXPORT TO CSV (WITH BOM UTF-8 & EXACT NEWLINES FIX)
+    function exportToCSV() {
+      if (filteredTableData.length === 0) {
+        alert("Tidak ada data untuk di-export.");
+        return;
+      }
+
+      let csvContent = '\uFEFF';
+      csvContent += unifiedTableHeaders.map(h => `"${String(h).replace(/"/g, '""')}"`).join(',') + '\n';
+
+      filteredTableData.forEach(row => {
+        let rowStr = unifiedTableHeaders.map(h => {
+          let val = row[h] !== undefined && row[h] !== null ? String(row[h]) : '-';
+          return `"${val.replace(/"/g, '""')}"`;
+        }).join(',');
+        csvContent += rowStr + '\n';
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const todayStr = new Date().toISOString().slice(0, 10);
+      
+      a.setAttribute('href', url);
+      a.setAttribute('download', `Data_Santri_Export_${todayStr}.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
 
     let toastTimeout = null;
@@ -1061,6 +1233,301 @@
     function handleFabClick(e) {
       if (!fabMoved) openTableModal();
     }
+
+    // STATISTIK & VISUALISASI CHART (WITH DYNAMIC HEIGHT & COMPLETE 100% DATA ABSORPTION)
+    let currentChart = null;
+    let activeStatsTab = 'status';
+
+    function openStatsModal() {
+      if (unifiedTableData.length === 0) prepareUnifiedTableData();
+
+      const modal = document.getElementById('statsModal');
+      const modalCard = document.getElementById('statsModalCard');
+
+      modalCard.classList.remove('animate-ios-modal');
+      void modalCard.offsetWidth;
+      modalCard.classList.add('animate-ios-modal');
+
+      modal.classList.remove('hidden');
+
+      renderSummaryWidgets();
+      populateStatsColumnSelector();
+
+      requestAnimationFrame(() => {
+        switchStatsTab(activeStatsTab || 'status');
+      });
+    }
+
+    function closeStatsModal() {
+      document.getElementById('statsModal').classList.add('hidden');
+    }
+
+    function renderSummaryWidgets() {
+      const widgetContainer = document.getElementById('statsSummaryWidget');
+      const totalSantri = unifiedTableData.length;
+
+      let mutaallimCount = Object.keys(DB.mutaallimMap || {}).length;
+      let mualimCount = Object.keys(DB.mualimMap || {}).length;
+      let tahfidzCount = Object.keys(DB.tahfidzMap || {}).length;
+
+      widgetContainer.innerHTML = `
+        <div class="bg-white rounded-2xl p-2 border border-slate-200 shadow-sm text-center">
+          <span class="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Total</span>
+          <span class="text-sm font-extrabold text-slate-800">${totalSantri.toLocaleString('id-ID')}</span>
+        </div>
+        <div class="bg-amber-50 rounded-2xl p-2 border border-amber-200 shadow-sm text-center">
+          <span class="text-[9px] font-bold text-amber-700 block uppercase tracking-wider">Muta'allim</span>
+          <span class="text-sm font-extrabold text-amber-900">${mutaallimCount}</span>
+        </div>
+        <div class="bg-blue-50 rounded-2xl p-2 border border-blue-200 shadow-sm text-center">
+          <span class="text-[9px] font-bold text-blue-700 block uppercase tracking-wider">Mu'allim</span>
+          <span class="text-sm font-extrabold text-blue-900">${mualimCount}</span>
+        </div>
+        <div class="bg-emerald-50 rounded-2xl p-2 border border-emerald-200 shadow-sm text-center">
+          <span class="text-[9px] font-bold text-emerald-700 block uppercase tracking-wider">Tahfidz</span>
+          <span class="text-sm font-extrabold text-emerald-900">${tahfidzCount}</span>
+        </div>
+      `;
+    }
+
+    function populateStatsColumnSelector() {
+      const selectEl = document.getElementById('statsColumnSelect');
+      if (!selectEl) return;
+      selectEl.innerHTML = `<option value="">-- Pilih Kolom --</option>`;
+
+      unifiedTableHeaders.forEach(header => {
+        if (header.toUpperCase() === 'ID PPS' || header.toUpperCase() === 'NAMA') return;
+        const opt = document.createElement('option');
+        opt.value = header;
+        opt.innerText = header;
+        selectEl.appendChild(opt);
+      });
+    }
+
+    function onStatsColumnSelectChange(selectedHeader) {
+      if (!selectedHeader) return;
+      
+      const btnStatus = document.getElementById('tabBtnStatus');
+      const btnDomisili = document.getElementById('tabBtnDomisili');
+      const btnKelas = document.getElementById('tabBtnKelas');
+
+      [btnStatus, btnDomisili, btnKelas].forEach(btn => {
+        btn.className = "py-1.5 px-3 rounded-lg hover:text-slate-900 transition";
+      });
+
+      renderDynamicColumnChart(selectedHeader);
+    }
+
+    function switchStatsTab(tabName) {
+      activeStatsTab = tabName;
+      document.getElementById('statsColumnSelect').value = "";
+
+      const btnStatus = document.getElementById('tabBtnStatus');
+      const btnDomisili = document.getElementById('tabBtnDomisili');
+      const btnKelas = document.getElementById('tabBtnKelas');
+
+      [btnStatus, btnDomisili, btnKelas].forEach(btn => {
+        btn.className = "py-1.5 px-3 rounded-lg hover:text-slate-900 transition";
+      });
+
+      if (tabName === 'status') {
+        btnStatus.className = "py-1.5 px-3 rounded-lg bg-white shadow text-emerald-700 transition font-bold";
+      } else if (tabName === 'domisili') {
+        btnDomisili.className = "py-1.5 px-3 rounded-lg bg-white shadow text-emerald-700 transition font-bold";
+      } else if (tabName === 'kelas') {
+        btnKelas.className = "py-1.5 px-3 rounded-lg bg-white shadow text-emerald-700 transition font-bold";
+      }
+
+      renderStatsChart(tabName);
+    }
+
+    function getFreshChartContext(customHeightPx) {
+      const wrapper = document.getElementById('chartCanvasWrapper');
+      if (customHeightPx) {
+        wrapper.style.height = customHeightPx + 'px';
+      } else {
+        wrapper.style.height = '260px';
+      }
+      wrapper.innerHTML = '<canvas id="statsChartCanvas"></canvas>';
+      
+      if (currentChart) {
+        currentChart.destroy();
+        currentChart = null;
+      }
+      return document.getElementById('statsChartCanvas').getContext('2d');
+    }
+
+    function renderStatsChart(tabName) {
+      const ctx = getFreshChartContext(260);
+      const footerEl = document.getElementById('statsChartFooter');
+      const totalSantri = unifiedTableData.length;
+
+      if (tabName === 'status') {
+        let mutaallimCount = Object.keys(DB.mutaallimMap || {}).length;
+        let mualimCount = Object.keys(DB.mualimMap || {}).length;
+        let tahfidzCount = Object.keys(DB.tahfidzMap || {}).length;
+
+        let statusSet = new Set([
+          ...Object.keys(DB.mutaallimMap || {}),
+          ...Object.keys(DB.mualimMap || {}),
+          ...Object.keys(DB.tahfidzMap || {})
+        ]);
+
+        let regularCount = totalSantri - statusSet.size;
+        if (regularCount < 0) regularCount = 0;
+
+        currentChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ["Muta'allim", "Mu'allim", "Tahfidz", "Regular"],
+            datasets: [{
+              data: [mutaallimCount, mualimCount, tahfidzCount, regularCount],
+              backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#94a3b8'],
+              borderWidth: 3,
+              borderColor: '#ffffff',
+              hoverOffset: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 800, easing: 'easeOutQuart' },
+            plugins: {
+              legend: { position: 'bottom', labels: { font: { size: 11, family: '-apple-system' }, boxWidth: 12 } }
+            },
+            cutout: '68%'
+          }
+        });
+
+        footerEl.innerHTML = `Total Santri Terdaftar: <strong>${totalSantri.toLocaleString('id-ID')}</strong> Santri`;
+
+      } else if (tabName === 'domisili' || tabName === 'kelas') {
+        let targetKey = tabName === 'domisili' ? 'Domisili' : ('Kelas' in (unifiedTableData[0] || {}) ? 'Kelas' : 'Tingkat');
+        renderBarChartForHeader(targetKey, footerEl, tabName === 'domisili' ? 'Sebaran Domisili' : 'Sebaran Tingkat / Kelas');
+      }
+    }
+
+    function renderDynamicColumnChart(headerKey) {
+      const footerEl = document.getElementById('statsChartFooter');
+      renderBarChartForHeader(headerKey, footerEl, `Statistik: ${headerKey}`);
+    }
+
+    function renderBarChartForHeader(headerKey, footerEl, titleCaption) {
+      let counts = {};
+      unifiedTableData.forEach(r => {
+        let val = r[headerKey] || '-';
+        counts[val] = (counts[val] || 0) + 1;
+      });
+
+      let sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      let labels = sorted.map(item => item[0]);
+      let dataValues = sorted.map(item => item[1]);
+
+      // SOLUSI GRAFIK GEPENG: Hitung tinggi canvas secara dinamis berdasarkan jumlah kategori
+      let dynamicHeight = Math.max(260, labels.length * 24);
+      const ctx = getFreshChartContext(dynamicHeight);
+
+      const colorPalette = [
+        '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#06b6d4', 
+        '#64748b', '#cbd5e1', '#14b8a6', '#6366f1', '#a855f7', '#f43f5e'
+      ];
+      let backgroundColors = labels.map((_, i) => colorPalette[i % colorPalette.length]);
+
+      currentChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Jumlah Santri',
+            data: dataValues,
+            backgroundColor: backgroundColors,
+            borderRadius: 6,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 600, easing: 'easeOutQuart' },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { grid: { display: false }, ticks: { font: { size: 10, weight: '600' } } }
+          }
+        }
+      });
+
+      footerEl.innerHTML = `${titleCaption} (Total ${labels.length} Kategori Terdeteksi)`;
+    }
   </script>
+
+<!-- id-pps-copy-script -->
+<script>
+(function() {
+  function pasangTombolSalinID() {
+    // Cari teks yang khusus mengandung "ID PPS" dan angka
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+    let node;
+    const targetElements = [];
+
+    while (node = walker.nextNode()) {
+      const val = node.nodeValue;
+      // Filter ketat: Harus ada kata 'ID PPS' dan ada deretan angka
+      if (val && val.includes("ID PPS") && /\d+/.test(val) && !val.includes("Ketik minimal")) {
+        const parent = node.parentElement;
+        if (parent && !parent.querySelector('.btn-salin-id')) {
+          targetElements.push(parent);
+        }
+      }
+    }
+
+    targetElements.forEach(parent => {
+      // Ambil HANYA deretan angka ID (misal: 14360213)
+      const match = parent.innerText.match(/\d+/);
+      if (!match) return;
+      const idNomor = match[0];
+
+      // Buat tombol salin kecil
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn-salin-id";
+      btn.innerHTML = "📋 Salin";
+      btn.style.cssText = "margin-left: 6px; padding: 2px 6px; font-size: 10px; font-weight: bold; background-color: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-block; vertical-align: middle;";
+
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        // Salin HANYA angka ID-nya
+        navigator.clipboard.writeText(idNomor).then(() => {
+          const oldText = btn.innerHTML;
+          btn.innerHTML = "✓ Tersalin";
+          btn.style.backgroundColor = "#16a34a";
+          setTimeout(() => {
+            btn.innerHTML = oldText;
+            btn.style.backgroundColor = "#059669";
+          }, 1200);
+        }).catch(() => {
+          alert("Gagal menyalin ID PPS.");
+        });
+      };
+
+      parent.appendChild(btn);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', pasangTombolSalinID);
+  } else {
+    pasangTombolSalinID();
+  }
+
+  // Pantau jika ada data pencarian baru yang muncul
+  const observer = new MutationObserver(pasangTombolSalinID);
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+
 </body>
 </html>
