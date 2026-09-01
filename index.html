@@ -61,7 +61,7 @@
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 relative">
 
-  <!-- NOTIFIKASI ALA IPHONE (LIGHT THEME - TANPA IKON HIJAU) -->
+  <!-- NOTIFIKASI ALA IPHONE -->
   <div id="iosToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[90] max-w-md w-[90%] bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-2xl rounded-2xl p-4 transition-all duration-300 -translate-y-24 opacity-0 pointer-events-none">
     <div class="flex justify-between items-center mb-1">
       <span id="toastPps" class="font-bold text-emerald-700 text-xs tracking-wider">ID PPS: -</span>
@@ -71,7 +71,7 @@
     <div id="toastDetail" class="text-slate-600 bg-slate-100/80 p-2.5 rounded-xl border border-slate-200/60 font-medium text-xs"></div>
   </div>
 
-  <!-- TOMBOL IKON MELAYANG BISA DIPINDAH (DRAGGABLE FAB) -->
+  <!-- TOMBOL IKON MELAYANG (DRAGGABLE FAB) -->
   <button id="fabTable" onclick="handleFabClick(event)" class="fixed bottom-6 right-6 z-40 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white p-3.5 rounded-2xl shadow-2xl flex items-center justify-center transition-transform touch-none cursor-move border border-emerald-400/40">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M3 18h18M3 6h18"></path>
@@ -156,7 +156,7 @@
         </table>
       </div>
 
-      <!-- Modal Footer (Paginasi 25 Baris) -->
+      <!-- Modal Footer -->
       <div class="p-3 border-t border-slate-200 bg-slate-50 flex justify-between items-center gap-2 text-xs">
         <button id="btnPrevPage" onclick="changeTablePage(-1)" class="px-4 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold disabled:opacity-40">
           « SBLM
@@ -171,7 +171,7 @@
     </div>
   </div>
 
-  <!-- MODAL POPUP FILTER (EXCEL STYLE POP-UP ALA IOS) -->
+  <!-- MODAL POPUP FILTER -->
   <div id="filterModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[80] flex items-center justify-center p-4 hidden">
     <div id="filterModalCard" class="bg-white rounded-2xl max-w-sm w-full p-4 shadow-2xl border border-slate-200 flex flex-col max-h-[85vh]">
       <div class="flex justify-between items-center mb-1">
@@ -180,7 +180,7 @@
       </div>
       <p class="text-[11px] text-slate-400 mb-3">Pilih daftar unik yang ingin ditampilkan</p>
       
-      <input type="text" id="filterSearchInput" oninput="renderFilterOptionItems()" placeholder="Cari dalam pilihan..." class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-2">
+      <input type="text" id="filterSearchInput" oninput="onFilterSearchInput()" placeholder="Cari dalam pilihan..." class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-2">
       
       <div class="flex justify-between items-center text-[11px] px-1 mb-2">
         <button type="button" onclick="selectAllFilterOptions(true)" class="text-emerald-600 hover:underline font-semibold">✓ Semua</button>
@@ -698,17 +698,16 @@
     let activeColumnFilters = {}; // { [headerName]: Set of selected values }
     let currentFilterHeader = '';
     let currentHeaderUniqueValues = [];
+    let currentModalSelectedSet = new Set();
 
     function prepareUnifiedTableData() {
       if (!DB.dataUtama || DB.dataUtama.length === 0) return;
 
-      // 1. Header Sheet Utama (Abaikan Foto/WA)
       let baseHeaders = DB.headersUtama.filter(h => {
         let name = h.toUpperCase().trim();
         return name !== "FOTO" && name !== "KONTAK WALI" && name !== "WA";
       });
 
-      // 2. Kumpulkan Semua Header Unik dari Sheet Lain (Mutaallim, Mualim, Tahfidz)
       let extraHeadersSet = new Set();
       let maps = [DB.mutaallimMap, DB.mualimMap, DB.tahfidzMap];
       
@@ -726,22 +725,17 @@
       });
 
       let extraHeaders = Array.from(extraHeadersSet);
-
-      // Gabungkan: Header Sheet Utama Dulu, Lalu Kolom Sheet Lain ditaruh PALING UJUNG
       unifiedTableHeaders = [...baseHeaders, ...extraHeaders];
 
-      // 3. Gabungkan Data (VLOOKUP Berdasarkan ID PPS)
       unifiedTableData = DB.dataUtama.map(row => {
         let idPps = row[0] ? String(row[0]).trim() : '';
         let item = {};
 
-        // Ambil data sheet utama
         baseHeaders.forEach(header => {
           let origIdx = DB.headersUtama.indexOf(header);
           item[header] = (origIdx !== -1 && row[origIdx] !== undefined && row[origIdx] !== null && String(row[origIdx]).trim() !== '') ? String(row[origIdx]).trim() : '-';
         });
 
-        // VLOOKUP dari Sheet Lain
         extraHeaders.forEach(header => {
           let foundVal = '-';
           if (DB.mutaallimMap && DB.mutaallimMap[idPps] && DB.mutaallimMap[idPps][header] !== undefined) {
@@ -793,7 +787,6 @@
 
         let content = `<div class="flex items-center justify-between gap-2"><span>${header}</span>`;
 
-        // Kolom 0 (ID PPS) & Kolom 1 (Nama) TIDAK diberi tombol filter agar aplikasi cepat & efisien
         if (idx > 1) {
           content += `
             <button onclick="openFilterModal('${header.replace(/'/g, "\\'")}')" class="${btnColorClass} text-[10px] px-1.5 py-0.5 rounded-md border shadow-sm transition flex items-center gap-1">
@@ -807,23 +800,45 @@
       });
     }
 
-    // ==========================================
-    // EFEK POP-UP FILTER ALA IOS
-    // ==========================================
+    // FILTER CASCADING & PEMILIHAN DINAMIS
     function openFilterModal(header) {
       currentFilterHeader = header;
       const modal = document.getElementById('filterModal');
       const modalCard = document.getElementById('filterModalCard');
       document.getElementById('filterModalTitle').innerText = `Filter: ${header}`;
-      document.getElementById('filterSearchInput').value = '';
+      
+      const searchInput = document.getElementById('filterSearchInput');
+      searchInput.value = '';
 
+      // 1. CASCADING FILTER: Ambil opsi unik hanya dari baris yang lolos filter kolom lain
       let valSet = new Set();
       unifiedTableData.forEach(row => {
-        let v = row[header] !== undefined && row[header] !== null ? String(row[header]) : '-';
-        valSet.add(v);
+        let passesOtherFilters = true;
+        for (let otherHeader in activeColumnFilters) {
+          if (otherHeader === header) continue;
+          let allowedSet = activeColumnFilters[otherHeader];
+          let cellVal = row[otherHeader] !== undefined && row[otherHeader] !== null ? String(row[otherHeader]) : '-';
+          if (allowedSet && !allowedSet.has(cellVal)) {
+            passesOtherFilters = false;
+            break;
+          }
+        }
+        if (passesOtherFilters) {
+          let v = row[header] !== undefined && row[header] !== null ? String(row[header]) : '-';
+          valSet.add(v);
+        }
       });
 
       currentHeaderUniqueValues = Array.from(valSet).sort();
+
+      // 2. Inisialisasi data centang
+      if (activeColumnFilters[header]) {
+        currentModalSelectedSet = new Set(
+          Array.from(activeColumnFilters[header]).filter(v => valSet.has(v))
+        );
+      } else {
+        currentModalSelectedSet = new Set(currentHeaderUniqueValues);
+      }
 
       renderFilterOptionItems();
 
@@ -837,56 +852,79 @@
       document.getElementById('filterModal').classList.add('hidden');
     }
 
+    // FUNGSI PENCARIAN DINAMIS DALAM MODAL (AUTOMATIC SYNC)
+    function onFilterSearchInput() {
+      const searchTerm = document.getElementById('filterSearchInput').value.toLowerCase().trim();
+      
+      if (searchTerm !== '') {
+        // Otomatis centang HANYA item yang cocok dengan kata kunci yang kamu ketik
+        let matchingValues = currentHeaderUniqueValues.filter(val => val.toLowerCase().includes(searchTerm));
+        currentModalSelectedSet = new Set(matchingValues);
+      } else {
+        // Jika input dikosongkan, kembalikan ke filter aktif semula atau centang semua
+        if (activeColumnFilters[currentFilterHeader]) {
+          currentModalSelectedSet = new Set(
+            Array.from(activeColumnFilters[currentFilterHeader]).filter(v => currentHeaderUniqueValues.includes(v))
+          );
+        } else {
+          currentModalSelectedSet = new Set(currentHeaderUniqueValues);
+        }
+      }
+      renderFilterOptionItems();
+    }
+
     function renderFilterOptionItems() {
       const container = document.getElementById('filterOptionList');
       const searchTerm = document.getElementById('filterSearchInput').value.toLowerCase().trim();
       container.innerHTML = '';
 
-      let existingSelection = activeColumnFilters[currentFilterHeader];
-
       currentHeaderUniqueValues.forEach((val) => {
         if (searchTerm && !val.toLowerCase().includes(searchTerm)) return;
 
-        let isChecked = !existingSelection || existingSelection.has(val);
+        let isChecked = currentModalSelectedSet.has(val);
         let itemDiv = document.createElement('label');
         itemDiv.className = 'flex items-center gap-2 py-1 px-1.5 hover:bg-slate-50 rounded cursor-pointer text-xs text-slate-700 select-none';
         
         let safeVal = val.replace(/"/g, '&quot;');
         itemDiv.innerHTML = `
-          <input type="checkbox" value="${safeVal}" ${isChecked ? 'checked' : ''} class="filter-chk rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5">
+          <input type="checkbox" value="${safeVal}" ${isChecked ? 'checked' : ''} onchange="toggleFilterOption(this)" class="filter-chk rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5">
           <span class="truncate">${val}</span>
         `;
         container.appendChild(itemDiv);
       });
     }
 
+    function toggleFilterOption(chk) {
+      if (chk.checked) {
+        currentModalSelectedSet.add(chk.value);
+      } else {
+        currentModalSelectedSet.delete(chk.value);
+      }
+    }
+
     function selectAllFilterOptions(status) {
-      const chks = document.querySelectorAll('#filterOptionList .filter-chk');
-      chks.forEach(chk => chk.checked = status);
+      const searchTerm = document.getElementById('filterSearchInput').value.toLowerCase().trim();
+      
+      let visibleValues = currentHeaderUniqueValues.filter(val => {
+        return !searchTerm || val.toLowerCase().includes(searchTerm);
+      });
+
+      visibleValues.forEach(val => {
+        if (status) {
+          currentModalSelectedSet.add(val);
+        } else {
+          currentModalSelectedSet.delete(val);
+        }
+      });
+
+      renderFilterOptionItems();
     }
 
     function applyCurrentFilterModal() {
-      const chks = document.querySelectorAll('#filterOptionList .filter-chk');
-      let selectedValues = new Set();
-      chks.forEach(chk => {
-        if (chk.checked) selectedValues.add(chk.value);
-      });
-
-      const searchTerm = document.getElementById('filterSearchInput').value.toLowerCase().trim();
-      if (searchTerm) {
-        currentHeaderUniqueValues.forEach(val => {
-          if (!val.toLowerCase().includes(searchTerm)) {
-            if (!activeColumnFilters[currentFilterHeader] || activeColumnFilters[currentFilterHeader].has(val)) {
-              selectedValues.add(val);
-            }
-          }
-        });
-      }
-
-      if (selectedValues.size === currentHeaderUniqueValues.length) {
+      if (currentModalSelectedSet.size === currentHeaderUniqueValues.length) {
         delete activeColumnFilters[currentFilterHeader];
       } else {
-        activeColumnFilters[currentFilterHeader] = selectedValues;
+        activeColumnFilters[currentFilterHeader] = new Set(currentModalSelectedSet);
       }
 
       closeFilterModal();
@@ -957,7 +995,6 @@
       renderTableData();
     }
 
-    // NOTIFIKASI ALA IPHONE / IOS (BERSIH TANPA IKON HIJAU)
     let toastTimeout = null;
     function showIosToast(rowObj, clickedHeader) {
       const toast = document.getElementById('iosToast');
@@ -983,7 +1020,6 @@
       }, 3500);
     }
 
-    // DRAGGABLE FAB LOGIC
     let fabMoved = false;
     function initFabDrag() {
       const fab = document.getElementById('fabTable');
