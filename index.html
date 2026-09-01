@@ -330,6 +330,7 @@
         try {
           const parsed = JSON.parse(localData);
           initDatabase(parsed, true);
+		  syncDataInBackground();
           return;
         } catch(e) {
           localStorage.removeItem('SANTRI_DB_CACHE');
@@ -338,29 +339,67 @@
       fetchDataFromServer(true);
     };
 
-    function fetchDataFromServer(showLoadingUI) {
-      if (showLoadingUI) document.getElementById('loading').classList.remove('hidden');
+// 1. Fungsi Fetch Data Utama
+function fetchDataFromServer(showLoadingUI) {
+  if (showLoadingUI) document.getElementById('loading').classList.remove('hidden');
 
-      fetch(API_URL)
-        .then(response => response.json())
-        .then(res => {
-          try {
-            localStorage.setItem('SANTRI_DB_CACHE', JSON.stringify(res));
-          } catch(e){}
-          initDatabase(res, false);
-        })
-        .catch(err => {
-          if (showLoadingUI) {
-            document.getElementById('loadingText').innerText = 'Gagal memuat data: ' + err.message;
-          }
-        });
-    }
+  const cacheBuster = (API_URL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
 
-    function forceRefreshData() {
-      document.getElementById('loadingText').innerText = "Memperbarui database...";
-      document.getElementById('loading').classList.remove('hidden');
-      fetchDataFromServer(true);
-    }
+  fetch(API_URL + cacheBuster, { cache: 'no-store' })
+    .then(response => response.json())
+    .then(res => {
+      try {
+        localStorage.setItem('SANTRI_DB_CACHE', JSON.stringify(res));
+      } catch(e) {}
+      
+      initDatabase(res, false);
+      if (showLoadingUI) document.getElementById('loading').classList.add('hidden');
+      showStatusBadge("Data Terbaru");
+    })
+    .catch(err => {
+      if (showLoadingUI) {
+        document.getElementById('loadingText').innerText = 'Gagal memuat data: ' + err.message;
+      }
+      showStatusBadge("Mode Offline");
+    });
+}
+
+// 2. Fungsi Background Sync (Cek pembaruan diam-diam)
+function syncDataInBackground() {
+  showStatusBadge("Memeriksa pembaruan...");
+  
+  const cacheBuster = (API_URL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+
+  fetch(API_URL + cacheBuster, { cache: 'no-store' })
+    .then(res => res.json())
+    .then(freshData => {
+      try {
+        localStorage.setItem('SANTRI_DB_CACHE', JSON.stringify(freshData));
+      } catch(e) {}
+      
+      initDatabase(freshData, false);
+      showStatusBadge("Data Terbaru");
+    })
+    .catch(() => {
+      showStatusBadge("Mode Offline");
+    });
+}
+
+// 3. Fungsi Tombol Sync Manual
+function forceRefreshData() {
+  document.getElementById('loadingText').innerText = "Memperbarui database...";
+  document.getElementById('loading').classList.remove('hidden');
+  fetchDataFromServer(true);
+}
+
+// 4. Fungsi Menampilkan Indikator Status
+function showStatusBadge(text) {
+  const badge = document.getElementById('cacheBadge');
+  if (badge) {
+    badge.innerText = text;
+    badge.classList.remove('hidden');
+  }
+}
 
     function initDatabase(res, isFromCache) {
       DB.headersUtama = res.headersUtama || [];
