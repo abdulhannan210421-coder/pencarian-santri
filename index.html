@@ -9,6 +9,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
+  <!-- IndexedDB Helper (idb-keyval) & Fuse.js (Fuzzy Search Khusus Tabel) CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd-min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+  
   <style>
     /* ANTI PULL-TO-REFRESH & iOS SMOOTH SCROLL */
     html, body {
@@ -23,10 +27,10 @@
 
 	#scrollableArea, .modal-scrollable {
 	  height: 100%;
-	  overflow: auto; /* Mengizinkan scroll vertikal & horizontal */
+	  overflow: auto;
 	  -webkit-overflow-scrolling: touch;
 	  overscroll-behavior: contain;
-	  touch-action: pan-x pan-y; /* Membuka akses geser kanan-kiri DAN atas-bawah */
+	  touch-action: pan-x pan-y;
 	}
 
     /* iOS POPUP & BOUNCE ANIMATION */
@@ -92,6 +96,12 @@
           <button onclick="openStatsModal()" title="Statistik Santri" class="text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
             📊 <span class="hidden sm:inline">Statistik Santri</span>
           </button>
+
+          <!-- SHORTCUT BOOKMARK SANTRI -->
+          <button id="btnViewBookmarks" onclick="showBookmarkedSantri()" title="Lihat Santri Bookmark" class="text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
+            ⭐ <span class="hidden sm:inline">Bookmark</span> (<span id="bookmarkCountLabel">0</span>)
+          </button>
+
           <span id="cacheBadge" class="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-full font-semibold border border-slate-200/60 hidden">
             ⚡ <span class="hidden sm:inline">Ter-cache</span>
           </span>
@@ -137,8 +147,6 @@
   <!-- MODAL STATISTIK & DASHBOARD -->
   <div id="statsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-3 sm:p-4 hidden">
     <div id="statsModalCard" class="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden relative">
-      
-      <!-- Modal Header -->
       <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
         <div>
           <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -149,11 +157,8 @@
         <button onclick="closeStatsModal()" class="text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">✕</button>
       </div>
 
-      <!-- iOS Widget Summary Cards -->
-      <div id="statsSummaryWidget" class="grid grid-cols-4 gap-2 px-4 pt-3 pb-2 bg-slate-50 border-b border-slate-100">
-      </div>
+      <div id="statsSummaryWidget" class="grid grid-cols-4 gap-2 px-4 pt-3 pb-2 bg-slate-50 border-b border-slate-100"></div>
 
-      <!-- Controls & Dynamic Column Selector -->
       <div class="px-4 py-2.5 bg-slate-100 border-b border-slate-200/60 flex flex-col sm:flex-row gap-2 justify-between items-center">
         <div class="w-full sm:w-auto grid grid-cols-3 gap-1 bg-slate-200/80 p-1 rounded-xl text-center text-xs font-semibold text-slate-600">
           <button id="tabBtnStatus" onclick="switchStatsTab('status')" class="py-1.5 px-3 rounded-lg bg-white shadow text-emerald-700 transition font-bold">Status</button>
@@ -166,7 +171,6 @@
         </select>
       </div>
 
-      <!-- Dynamic Chart Scroll Container -->
       <div class="p-4 flex-grow modal-scrollable flex flex-col items-center justify-start min-h-[300px]">
         <div id="chartCanvasWrapper" class="w-full relative min-h-[260px] flex items-center justify-center">
           <canvas id="statsChartCanvas"></canvas>
@@ -179,7 +183,6 @@
   <!-- MODAL TABEL DATABASE SANTRI LENGKAP -->
   <div id="tableModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-2 sm:p-4 hidden">
     <div id="tableModalCard" class="bg-white rounded-3xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
-      <!-- Modal Header -->
       <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
         <div>
           <h2 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -192,15 +195,17 @@
         </div>
       </div>
 
-      <!-- Filter Controls Bar -->
       <div class="px-4 py-2.5 bg-slate-100 border-b border-slate-200 flex flex-wrap justify-between items-center gap-2 text-xs">
-        <span id="tableTotalCount" class="text-slate-600 font-semibold">Menampilkan 0 data</span>
-        <button onclick="resetTableFilters()" class="text-emerald-700 hover:text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl font-semibold text-[11px] transition shadow-sm active:scale-95">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <span id="tableTotalCount" class="text-slate-600 font-semibold whitespace-nowrap">Menampilkan 0 data</span>
+          <input type="text" id="tableNameSearch" oninput="debounceTableNameSearch()" placeholder="🔍 Cari Nama / ID PPS di Tabel..." class="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-60 shadow-sm transition">
+        </div>
+
+        <button onclick="resetTableFilters()" class="text-emerald-700 hover:text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl font-semibold text-[11px] transition shadow-sm active:scale-95">
           🔄 Reset Filter
         </button>
       </div>
 
-      <!-- Table Scrollable Body -->
       <div class="flex-grow modal-scrollable p-2 sm:p-4">
         <table class="w-full text-left text-xs border-collapse">
           <thead>
@@ -212,7 +217,6 @@
         </table>
       </div>
 
-      <!-- Modal Footer Pagination -->
       <div class="p-3 border-t border-slate-200 bg-slate-50 flex justify-between items-center gap-2 text-xs">
         <button id="btnPrevPage" onclick="changeTablePage(-1)" class="px-4 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 font-semibold disabled:opacity-40">
           « SBLM
@@ -290,7 +294,6 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzV_l5rAXgnapi2c3ZH90WOusrHgN-Ny9wjaFJ9tczCl1mkz1pURw_sZUYhEF4YY6byRg/exec";
 
-    // XSS Protection Utility
     function escapeHTML(str) {
       if (str === null || str === undefined) return '';
       return String(str)
@@ -322,84 +325,216 @@
       tahfidzMap: {}
     };
 
-    window.onload = function() {
-      initFabDrag();
+    // HYBRID STORAGE SYSTEM (INDEXEDDB DENGAN LOCALSTORAGE FALLBACK)
+    const HybridStore = {
+      get: function(key) {
+        return new Promise((resolve) => {
+          // 1. Coba baca dari IndexedDB
+          if (window.idbKeyval) {
+            idbKeyval.get(key).then(val => {
+              if (val) {
+                resolve(val);
+              } else {
+                // Read LocalStorage Fallback
+                const loc = localStorage.getItem(key);
+                resolve(loc ? JSON.parse(loc) : null);
+              }
+            }).catch(() => {
+              const loc = localStorage.getItem(key);
+              resolve(loc ? JSON.parse(loc) : null);
+            });
+          } else {
+            const loc = localStorage.getItem(key);
+            resolve(loc ? JSON.parse(loc) : null);
+          }
+        });
+      },
+      set: function(key, val) {
+        return new Promise((resolve) => {
+          // Simpan ringkasan metadata ke LocalStorage
+          try {
+            if (key === 'SANTRI_BOOKMARKS') {
+              localStorage.setItem(key, JSON.stringify(val));
+            }
+          } catch(e) {}
 
-      const localData = localStorage.getItem('SANTRI_DB_CACHE');
-      if (localData) {
-        try {
-          const parsed = JSON.parse(localData);
-          initDatabase(parsed, true);
-		  syncDataInBackground();
-          return;
-        } catch(e) {
-          localStorage.removeItem('SANTRI_DB_CACHE');
-        }
+          // Simpan data utama ke IndexedDB
+          if (window.idbKeyval) {
+            idbKeyval.set(key, val).then(() => resolve(true)).catch(() => {
+              try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+              resolve(true);
+            });
+          } else {
+            try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+            resolve(true);
+          }
+        });
       }
-      fetchDataFromServer(true);
     };
 
-// 1. Fungsi Fetch Data Utama
-function fetchDataFromServer(showLoadingUI) {
-  if (showLoadingUI) document.getElementById('loading').classList.remove('hidden');
+    // BOOKMARK SYSTEM
+    let bookmarkedPpsSet = new Set();
 
-  const cacheBuster = (API_URL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+    function loadBookmarks() {
+      HybridStore.get('SANTRI_BOOKMARKS').then(val => {
+        if (Array.isArray(val)) {
+          bookmarkedPpsSet = new Set(val);
+          updateBookmarkBadgeCount();
+        }
+      });
+    }
 
-  fetch(API_URL + cacheBuster, { cache: 'no-store' })
-    .then(response => response.json())
-    .then(res => {
-      try {
-        localStorage.setItem('SANTRI_DB_CACHE', JSON.stringify(res));
-      } catch(e) {}
-      
-      initDatabase(res, false);
-      if (showLoadingUI) document.getElementById('loading').classList.add('hidden');
-      showStatusBadge("Data Terbaru");
-    })
-    .catch(err => {
-      if (showLoadingUI) {
-        document.getElementById('loadingText').innerText = 'Gagal memuat data: ' + err.message;
+    function saveBookmarks() {
+      HybridStore.set('SANTRI_BOOKMARKS', Array.from(bookmarkedPpsSet));
+      updateBookmarkBadgeCount();
+    }
+
+    function isBookmarked(idPps) {
+      if (!idPps) return false;
+      return bookmarkedPpsSet.has(String(idPps).trim());
+    }
+
+    function toggleBookmark(event, idPps) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
       }
-      showStatusBadge("Mode Offline");
-    });
-}
+      if (!idPps) return;
 
-// 2. Fungsi Background Sync (Cek pembaruan diam-diam)
-function syncDataInBackground() {
-  showStatusBadge("Memeriksa pembaruan...");
-  
-  const cacheBuster = (API_URL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+      const cleanId = String(idPps).trim();
+      if (bookmarkedPpsSet.has(cleanId)) {
+        bookmarkedPpsSet.delete(cleanId);
+        showIosToastSimple("⭐ BOOKMARK", "Dihapus dari daftar bookmark.");
+      } else {
+        bookmarkedPpsSet.add(cleanId);
+        showIosToastSimple("⭐ BOOKMARK", "Disimpan ke daftar bookmark! ⭐");
+      }
+      saveBookmarks();
+      renderCurrentCard();
+    }
 
-  fetch(API_URL + cacheBuster, { cache: 'no-store' })
-    .then(res => res.json())
-    .then(freshData => {
-      try {
-        localStorage.setItem('SANTRI_DB_CACHE', JSON.stringify(freshData));
-      } catch(e) {}
+    function updateBookmarkBadgeCount() {
+      const label = document.getElementById('bookmarkCountLabel');
+      if (label) label.innerText = bookmarkedPpsSet.size;
+    }
+
+    function showBookmarkedSantri() {
+      if (bookmarkedPpsSet.size === 0) {
+        showIosToastSimple("⭐ BOOKMARK", "Belum ada santri yang di-bookmark.");
+        return;
+      }
+      const container = document.getElementById('resultContainer');
+      const infoMsg = document.getElementById('infoMessage');
+
+      container.innerHTML = '';
+      infoMsg.innerHTML = '';
+      currentCardIndex = 0;
+
+      searchResults = DB.dataUtama.filter(row => {
+        const idPps = row[0] ? String(row[0]).trim() : '';
+        return bookmarkedPpsSet.has(idPps);
+      });
+
+      if (searchResults.length === 0) {
+        container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-2xl">Data santri bookmark tidak ditemukan di database saat ini.</div>`;
+        return;
+      }
+
+      renderCurrentCard();
+    }
+
+    function showIosToastSimple(title, message) {
+      const toast = document.getElementById('iosToast');
+      const ppsEl = document.getElementById('toastPps');
+      const namaEl = document.getElementById('toastNama');
+      const detailEl = document.getElementById('toastDetail');
+
+      ppsEl.innerText = title;
+      namaEl.innerText = "Info Bookmark";
+      detailEl.innerText = message;
+
+      toast.classList.remove('-translate-y-24', 'opacity-0', 'pointer-events-none');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('-translate-y-24', 'opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    // ONLOAD DENGAN FLOW BACKGROUND SYNC MURNI DARI FILE ASLI
+    window.onload = function() {
+      initFabDrag();
+      loadBookmarks();
+
+      HybridStore.get('SANTRI_DB_CACHE').then(cachedData => {
+        if (cachedData && cachedData.dataUtama) {
+          initDatabase(cachedData, true);
+          syncDataInBackground();
+        } else {
+          fetchDataFromServer(true);
+        }
+      }).catch(() => {
+        fetchDataFromServer(true);
+      });
+    };
+
+    // 1. Fungsi Fetch Data Utama
+    function fetchDataFromServer(showLoadingUI) {
+      if (showLoadingUI) document.getElementById('loading').classList.remove('hidden');
+
+      const cacheBuster = (API_URL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+
+      fetch(API_URL + cacheBuster, { cache: 'no-store' })
+        .then(response => response.json())
+        .then(res => {
+          HybridStore.set('SANTRI_DB_CACHE', res);
+          initDatabase(res, false);
+          if (showLoadingUI) document.getElementById('loading').classList.add('hidden');
+          showStatusBadge("Data Terbaru");
+        })
+        .catch(err => {
+          if (showLoadingUI) {
+            document.getElementById('loadingText').innerText = 'Gagal memuat data: ' + err.message;
+          }
+          showStatusBadge("Mode Offline");
+        });
+    }
+
+    // 2. Fungsi Background Sync (Proses pembaruan diam-diam)
+    function syncDataInBackground() {
+      showStatusBadge("Memeriksa pembaruan...");
       
-      initDatabase(freshData, false);
-      showStatusBadge("Data Terbaru");
-    })
-    .catch(() => {
-      showStatusBadge("Mode Offline");
-    });
-}
+      const cacheBuster = (API_URL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
 
-// 3. Fungsi Tombol Sync Manual
-function forceRefreshData() {
-  document.getElementById('loadingText').innerText = "Memperbarui database...";
-  document.getElementById('loading').classList.remove('hidden');
-  fetchDataFromServer(true);
-}
+      fetch(API_URL + cacheBuster, { cache: 'no-store' })
+        .then(res => res.json())
+        .then(freshData => {
+          HybridStore.set('SANTRI_DB_CACHE', freshData);
+          initDatabase(freshData, false);
+          showStatusBadge("Data Terbaru");
+        })
+        .catch(() => {
+          showStatusBadge("Mode Offline");
+        });
+    }
 
-// 4. Fungsi Menampilkan Indikator Status
-function showStatusBadge(text) {
-  const badge = document.getElementById('cacheBadge');
-  if (badge) {
-    badge.innerText = text;
-    badge.classList.remove('hidden');
-  }
-}
+    // 3. Fungsi Tombol Sync Manual
+    function forceRefreshData() {
+      document.getElementById('loadingText').innerText = "Memperbarui database...";
+      document.getElementById('loading').classList.remove('hidden');
+      fetchDataFromServer(true);
+    }
+
+    // 4. Fungsi Menampilkan Indikator Status
+    function showStatusBadge(text) {
+      const badge = document.getElementById('cacheBadge');
+      if (badge) {
+        badge.innerText = text;
+        badge.classList.remove('hidden');
+      }
+    }
 
     function initDatabase(res, isFromCache) {
       DB.headersUtama = res.headersUtama || [];
@@ -416,6 +551,7 @@ function showStatusBadge(text) {
 
       prepareUnifiedTableData();
       populateStatsColumnSelector();
+      updateBookmarkBadgeCount();
     }
 
     let searchTimeout = null;
@@ -431,6 +567,7 @@ function showStatusBadge(text) {
       }
     }
 
+    // PENCARIAN HALAMAN UTAMA: MURNI DENGAN .includes() PERSIS KODE ASLI
     function lakukanPencarianFast(isForce) {
       const inputEl = document.getElementById('searchInput');
       const keyword = inputEl.value.toLowerCase().trim();
@@ -463,7 +600,7 @@ function showStatusBadge(text) {
       }, 10);
     }
 
-    // LOGIKA EKSTRAKSI & FORMAT TANGGAL LAHIR (DDMMYYYY)
+    // LOGIKA TANGGAL LAHIR (DDMMYYYY)
     function getFormattedBirthDate(row, headers) {
       if (!row || !headers) return '';
 
@@ -580,7 +717,6 @@ function showStatusBadge(text) {
       return '';
     }
 
-    // FUNGSI SALIN ID PPS & TANGGAL LAHIR
     function salinDataSantriCard(event) {
       if (event) {
         event.stopPropagation();
@@ -669,6 +805,12 @@ function showStatusBadge(text) {
 
       const navHint = total > 1 ? `<div class="text-[10px] text-slate-400 text-center mt-3 pt-2 border-t border-slate-100 flex items-center justify-center gap-1 select-none"><span>👈 Usap / ketuk tepi kartu untuk berpindah 👉</span></div>` : '';
 
+      const bookmarked = isBookmarked(idPps);
+      const bookmarkBtnClass = bookmarked
+        ? 'bg-amber-500 text-white hover:bg-amber-600 border-amber-500'
+        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200';
+      const bookmarkIconText = bookmarked ? '★ Bookmark' : '☆ Bookmark';
+
       const card = `
       <div class="card-perspective relative">
         <div id="cardFlipWrapper" 
@@ -683,6 +825,7 @@ function showStatusBadge(text) {
           </button>
 
           <div class="flex items-center gap-4 pb-4 border-b border-slate-100 pr-20">
+            <!-- KLIK THUMBNAIL FOTO UNTUK ZOOM POPUP BOUNCE -->
             <div class="relative group cursor-pointer flex-shrink-0" onclick="openPhotoModal()">
               ${safeFotoUrl ? `
                 <img src="${safeFotoUrl}" alt="Thumbnail Santri" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm hover:scale-105 transition-transform">
@@ -709,14 +852,17 @@ function showStatusBadge(text) {
 
           ${statusSectionsHtml}
 
+          <!-- FOOTER KARTU: TOMBOL BOOKMARK BINTANG MENGGANTIKAN LIHAT FOTO -->
           <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="text-[11px] text-slate-400 font-medium mr-1 select-none">Hubungi:</span>
               ${buatTombolWA(infoKontakWali)}
             </div>
-            <button onclick="openPhotoModal()" 
-                    class="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold underline select-none">
-              Lihat Foto &raquo;
+
+            <button onclick="toggleBookmark(event, '${escapeHTML(idPps)}')" 
+                    class="text-xs font-bold ${bookmarkBtnClass} px-3 py-1.5 rounded-xl border shadow-sm transition flex items-center gap-1.5 active:scale-95 select-none" 
+                    title="Simpan Santri ke Bookmark">
+              ${bookmarkIconText}
             </button>
           </div>
 
@@ -961,6 +1107,41 @@ function showStatusBadge(text) {
     let currentHeaderUniqueValues = [];
     let currentModalSelectedSet = new Set();
 
+    // ENGINE FUSE.JS KHUSUS POP-UP TABEL DENGAN DEBOUNCE
+    let tableNameSearchTimeout = null;
+    let tableNameSearchKeyword = "";
+    let fuseTableInstance = null;
+
+    function initFuseTableEngine() {
+      if (!unifiedTableData || unifiedTableData.length === 0) return;
+      if (!window.Fuse) return;
+
+      const ppsKey = unifiedTableHeaders[0] || 'ID PPS';
+      const namaKey = unifiedTableHeaders[1] || 'Nama';
+
+      fuseTableInstance = new Fuse(unifiedTableData, {
+        keys: [
+          { name: ppsKey, weight: 0.4 },
+          { name: namaKey, weight: 0.6 }
+        ],
+        threshold: 0.35,
+        ignoreLocation: true,
+        minMatchCharLength: 2
+      });
+    }
+
+    function debounceTableNameSearch() {
+      clearTimeout(tableNameSearchTimeout);
+      tableNameSearchTimeout = setTimeout(() => {
+        const inputEl = document.getElementById('tableNameSearch');
+        if (inputEl) {
+          tableNameSearchKeyword = inputEl.value.toLowerCase().trim();
+          tableCurrentPage = 1;
+          renderTableData();
+        }
+      }, 350);
+    }
+
     function prepareUnifiedTableData() {
       if (!DB.dataUtama || DB.dataUtama.length === 0) return;
 
@@ -1014,6 +1195,7 @@ function showStatusBadge(text) {
       });
 
       filteredTableData = [...unifiedTableData];
+      initFuseTableEngine();
     }
 
     function openTableModal() {
@@ -1184,6 +1366,10 @@ function showStatusBadge(text) {
 
     function resetTableFilters() {
       activeColumnFilters = {};
+      tableNameSearchKeyword = "";
+      const searchInput = document.getElementById('tableNameSearch');
+      if (searchInput) searchInput.value = "";
+
       tableCurrentPage = 1;
       renderTableHeaders();
       renderTableData();
@@ -1193,7 +1379,29 @@ function showStatusBadge(text) {
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = '';
 
-      filteredTableData = unifiedTableData.filter(row => {
+      let baseDataset = unifiedTableData;
+
+      if (tableNameSearchKeyword) {
+        if (fuseTableInstance) {
+          const fuseResults = fuseTableInstance.search(tableNameSearchKeyword);
+          baseDataset = fuseResults.map(r => r.item);
+          if (baseDataset.length === 0) {
+            baseDataset = unifiedTableData.filter(row => {
+              const pps = String(row['ID PPS'] || row[unifiedTableHeaders[0]] || '').toLowerCase();
+              const nama = String(row['Nama'] || row[unifiedTableHeaders[1]] || '').toLowerCase();
+              return pps.includes(tableNameSearchKeyword) || nama.includes(tableNameSearchKeyword);
+            });
+          }
+        } else {
+          baseDataset = unifiedTableData.filter(row => {
+            const pps = String(row['ID PPS'] || row[unifiedTableHeaders[0]] || '').toLowerCase();
+            const nama = String(row['Nama'] || row[unifiedTableHeaders[1]] || '').toLowerCase();
+            return pps.includes(tableNameSearchKeyword) || nama.includes(tableNameSearchKeyword);
+          });
+        }
+      }
+
+      filteredTableData = baseDataset.filter(row => {
         for (let header in activeColumnFilters) {
           let allowedSet = activeColumnFilters[header];
           let cellVal = row[header] !== undefined && row[header] !== null ? String(row[header]) : '-';
