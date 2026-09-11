@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Pencarian Data Santri</title>
   
-  <!-- Tailwind CSS & Chart.js CDN -->
+  <!-- Tailwind CSS & Chart.js CDN (Tips: Untuk produksi, compile CSS statis via Tailwind CLI agar hemat CPU/RAM) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
@@ -475,29 +475,44 @@
       tahfidzMap: {}
     };
 
-    // HYBRID STORAGE SYSTEM
+    // HYBRID STORAGE SYSTEM DENGAN IN-MEMORY FALLBACK
+    const memoryFallback = {};
+
     const HybridStore = {
       get: function(key) {
         return new Promise((resolve) => {
           if (window.idbKeyval) {
             idbKeyval.get(key).then(val => {
-              if (val) resolve(val);
+              if (val !== undefined && val !== null) resolve(val);
               else {
-                const loc = localStorage.getItem(key);
-                resolve(loc ? JSON.parse(loc) : null);
+                try {
+                  const loc = localStorage.getItem(key);
+                  resolve(loc ? JSON.parse(loc) : memoryFallback[key] || null);
+                } catch(e) {
+                  resolve(memoryFallback[key] || null);
+                }
               }
             }).catch(() => {
-              const loc = localStorage.getItem(key);
-              resolve(loc ? JSON.parse(loc) : null);
+              try {
+                const loc = localStorage.getItem(key);
+                resolve(loc ? JSON.parse(loc) : memoryFallback[key] || null);
+              } catch(e) {
+                resolve(memoryFallback[key] || null);
+              }
             });
           } else {
-            const loc = localStorage.getItem(key);
-            resolve(loc ? JSON.parse(loc) : null);
+            try {
+              const loc = localStorage.getItem(key);
+              resolve(loc ? JSON.parse(loc) : memoryFallback[key] || null);
+            } catch(e) {
+              resolve(memoryFallback[key] || null);
+            }
           }
         });
       },
       set: function(key, val) {
         return new Promise((resolve) => {
+          memoryFallback[key] = val; // Simpan di RAM sementara jika storage penuh
           try {
             if (key === 'SANTRI_BOOKMARKS') localStorage.setItem(key, JSON.stringify(val));
           } catch(e) {}
@@ -670,7 +685,7 @@
         tableHtml += `<th class="p-3 font-bold min-w-[200px] bg-emerald-50 text-emerald-900 border-l border-slate-200">
           <div class="flex justify-between items-center mb-1">
             <span class="truncate font-extrabold text-sm">${escapeHTML(nama)}</span>
-            <button onclick="toggleCompare(null, '${escapeHTML(pps)}'); openCompareModal();" class="text-xs text-rose-500 font-bold hover:bg-rose-100 rounded-full w-5 h-5 flex items-center justify-center">✕</button>
+            <button onclick="toggleCompare(null, decodeURIComponent('${encodeURIComponent(pps)}')); openCompareModal();" class="text-xs text-rose-500 font-bold hover:bg-rose-100 rounded-full w-5 h-5 flex items-center justify-center">✕</button>
           </div>
           <div class="text-[10px] text-emerald-700 mb-1">ID PPS: ${escapeHTML(pps)}</div>
           <div class="flex flex-wrap gap-1">${badges.join(' ')}</div>
@@ -1255,13 +1270,13 @@
             </div>
 
             <div class="flex items-center gap-1.5">
-              <button onclick="toggleCompare(event, '${escapeHTML(idPps)}')" 
+              <button onclick="toggleCompare(event, decodeURIComponent('${encodeURIComponent(idPps)}'))" 
                       class="text-xs font-bold ${compareBtnClass} px-2.5 py-1.5 rounded-xl border shadow-sm transition flex items-center gap-1 active:scale-95 select-none" 
                       title="Tambah ke Komparasi">
                 ${compareIconText}
               </button>
               
-              <button onclick="toggleBookmark(event, '${escapeHTML(idPps)}')" 
+              <button onclick="toggleBookmark(event, decodeURIComponent('${encodeURIComponent(idPps)}'))" 
                       class="text-xs font-bold ${bookmarkBtnClass} px-2.5 py-1.5 rounded-xl border shadow-sm transition flex items-center gap-1 active:scale-95 select-none" 
                       title="Simpan Santri ke Bookmark">
                 ${bookmarkIconText}
@@ -1508,7 +1523,6 @@
     let isGeocodingWorking = false;
     let activeMapMarkers = {};
 
-    // 1. PENERJEMAH SINGKATAN PROVINSI
     function normalizeRegionName(rawName) {
       if (!rawName) return '';
       let clean = String(rawName).toLowerCase().trim()
@@ -1546,7 +1560,6 @@
       return abbrevMap[clean] || clean;
     }
 
-    // 2. KAMUS PROVINSI INDONESIA (100% INSTAN HASIL TANAM)
     const PROVINCE_COORDS = {
       "papua": [-4.2699, 138.0804], "papua barat": [-1.3361, 133.1747], "papua selatan": [-7.5000, 139.0000],
       "papua tengah": [-3.8000, 136.5000], "papua pegunungan": [-4.1000, 138.9000], "maluku": [-3.2385, 130.1453],
@@ -1563,7 +1576,6 @@
       "banten": [-6.4058, 106.0640], "selangor": [3.0738, 101.5183]
     };
 
-    // 3. KAMUS KABUPATEN/KOTA PENTING (OFFLINE EXTENSION)
     const LOCAL_KAB_COORDS = {
       "buru": [-3.3256, 127.1086], "jayapura": [-2.5387, 140.7029], "maros": [-5.0064, 119.5741],
       "kubu raya": [-0.4439, 109.3402], "pasuruan": [-7.6453, 112.9075], "semarang": [-7.0051, 110.4381],
@@ -1724,7 +1736,7 @@
               <div class="max-h-32 overflow-y-auto mb-3 bg-slate-50 p-2 rounded-xl border border-slate-200 text-[11px] leading-relaxed">
                 ${listNamesHtml}
               </div>
-              <button onclick="filterByCityFromMap('${escapeHTML(provData.displayName)}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded-xl transition text-[11px] shadow">
+              <button onclick="filterByCityFromMap(decodeURIComponent('${encodeURIComponent(provData.displayName)}'))" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded-xl transition text-[11px] shadow">
                 🔍 Tampilkan Santri Provinsi Ini
               </button>
             </div>
@@ -1763,7 +1775,7 @@
           <div class="max-h-32 overflow-y-auto mb-3 bg-slate-50 p-2 rounded-xl border border-slate-200 text-[11px] leading-relaxed">
             ${listNamesHtml}
           </div>
-          <button onclick="filterByCityFromMap('${escapeHTML(displayName)}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-xl transition text-[11px] shadow">
+          <button onclick="filterByCityFromMap(decodeURIComponent('${encodeURIComponent(displayName)}'))" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-xl transition text-[11px] shadow">
             🔍 Tampilkan Santri Daerah Ini
           </button>
         </div>
@@ -1808,7 +1820,6 @@
           if (coords) {
             plotKabupatenMarker(coords, kabData.displayName, kabData.santriList);
           } else {
-            // Masukkan ke antrean pencarian online bertahap
             pendingItems.push({
               normKab: normKab,
               normProv: normProv,
@@ -1828,7 +1839,6 @@
       }
     }
 
-    // ANTREAN PENCARIAN ONLINE BERTAMBAH 1 PER detik (1.200ms)
     async function processGeocodeQueue() {
       if (isGeocodingWorking || geocodeQueue.length === 0) return;
 
@@ -1848,12 +1858,21 @@
       const searchStr = `${cleanKabQuery}, ${cleanProvQuery}, Indonesia`;
 
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=id&limit=1&q=${encodeURIComponent(searchStr)}`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=id&limit=1&q=${encodeURIComponent(searchStr)}`, {
+          headers: { 'Accept-Language': 'id' }
+        });
         
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
             const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+
+            // Batasi cache maksimal 150 daerah untuk mencegah RAM/penyimpanan membengkak
+            const cacheKeys = Object.keys(geocodeMemoryCache);
+            if (cacheKeys.length >= 150) {
+              delete geocodeMemoryCache[cacheKeys[0]];
+            }
+
             geocodeMemoryCache[item.normKab] = coords;
             await HybridStore.set('GEOCODE_CACHE', geocodeMemoryCache);
 
