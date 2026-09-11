@@ -9,9 +9,13 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
-  <!-- IndexedDB Helper (idb-keyval) & Fuse.js (Fuzzy Search Khusus Tabel) CDN -->
+  <!-- IndexedDB Helper (idb-keyval) & Fuse.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd-min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+  
+  <!-- Leaflet.js (Peta GIS Interaktif) CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   
   <style>
     /* ANTI PULL-TO-REFRESH & iOS SMOOTH SCROLL */
@@ -25,13 +29,13 @@
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-	#scrollableArea, .modal-scrollable {
-	  height: 100%;
-	  overflow: auto;
-	  -webkit-overflow-scrolling: touch;
-	  overscroll-behavior: contain;
-	  touch-action: pan-x pan-y;
-	}
+    #scrollableArea, .modal-scrollable {
+      height: 100%;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-x pan-y;
+    }
 
     /* iOS POPUP & BOUNCE ANIMATION */
     @keyframes iosPop {
@@ -60,17 +64,20 @@
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-    /* MEMASTIKAN TEKS BISA DI-COPY */
     .selectable-text {
       user-select: text !important;
       -webkit-user-select: text !important;
     }
+
+    /* LEAFLET Z-INDEX FIX */
+    .leaflet-pane { z-index: 10 !important; }
+    .leaflet-bottom, .leaflet-top { z-index: 20 !important; }
   </style>
 </head>
 <body class="text-slate-800 relative bg-slate-100">
 
   <!-- TOAST NOTIFIKASI ALA iOS -->
-  <div id="iosToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[110] max-w-md w-[90%] bg-white/95 backdrop-blur-2xl border border-white/80 shadow-2xl rounded-2xl p-4 transition-all duration-300 -translate-y-24 opacity-0 pointer-events-none">
+  <div id="iosToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[150] max-w-md w-[90%] bg-white/95 backdrop-blur-2xl border border-white/80 shadow-2xl rounded-2xl p-4 transition-all duration-300 -translate-y-24 opacity-0 pointer-events-none">
     <div class="flex justify-between items-center mb-1">
       <span id="toastPps" class="font-bold text-emerald-700 text-xs tracking-wider">ID PPS: -</span>
       <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Info Santri</span>
@@ -79,54 +86,84 @@
     <div id="toastDetail" class="text-slate-600 bg-slate-100/90 p-2.5 rounded-xl border border-slate-200/50 font-medium text-xs selectable-text"></div>
   </div>
 
-  <!-- TOMBOL IKON MELAYANG (FAB TABEL) -->
-  <button id="fabTable" onclick="handleFabClick(event)" class="fixed bottom-6 right-6 z-40 bg-emerald-600/90 hover:bg-emerald-600 active:scale-95 text-white p-4 rounded-full shadow-2xl backdrop-blur-lg flex items-center justify-center transition-all border border-emerald-400/40">
+  <!-- TOMBOL IKON MELAYANG (FAB TABEL) - DILUAR HP (DESKTOP ONLY) -->
+  <button id="fabTable" onclick="handleFabClick(event)" class="hidden sm:flex fixed bottom-6 right-6 z-40 bg-emerald-600/90 hover:bg-emerald-600 active:scale-95 text-white p-4 rounded-full shadow-2xl backdrop-blur-lg items-center justify-center transition-all border border-emerald-400/40" title="Buka Database">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 10h18M3 14h18M3 18h18M3 6h18"></path>
     </svg>
   </button>
 
   <!-- CONTAINER SCROLL UTAMA -->
-  <div id="scrollableArea" class="p-4 md:p-8">
-    <div class="max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl p-6 border border-slate-200 my-2">
+  <div id="scrollableArea" class="p-3 sm:p-6 md:p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl p-4 sm:p-6 border border-slate-200 my-2">
       
-      <!-- TOP ACTION BAR -->
-      <div class="flex justify-between items-center gap-2 mb-6">
-        <div class="flex items-center gap-1.5 flex-wrap">
-          <button onclick="openStatsModal()" title="Statistik Santri" class="text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
-            📊 <span class="hidden sm:inline">Statistik Santri</span>
+      <!-- TOP ACTION BAR DESKTOP & MOBILE MENU TRIGGER -->
+      <div class="mb-5">
+        <!-- TAMPILAN MOBILE: TOMBOL TUNGGAL CLEAN & ELEGAT -->
+        <div class="flex sm:hidden justify-between items-center gap-2">
+          <button onclick="openFeatureMenuModal()" class="w-full bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-semibold text-xs py-2 px-3.5 rounded-xl flex items-center justify-between border border-slate-200/80 shadow-sm active:scale-98 transition">
+            <span class="flex items-center gap-2 font-bold text-slate-800 text-xs">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Fitur Aplikasi</span>
+            </span>
+            <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-lg">Pilih ▾</span>
           </button>
-
-          <!-- SHORTCUT BOOKMARK SANTRI -->
-          <button id="btnViewBookmarks" onclick="showBookmarkedSantri()" title="Lihat Santri Bookmark" class="text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
-            ⭐ <span class="hidden sm:inline">Bookmark</span> (<span id="bookmarkCountLabel">0</span>)
-          </button>
-
-          <span id="cacheBadge" class="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-full font-semibold border border-slate-200/60 hidden">
-            ⚡ <span class="hidden sm:inline">Ter-cache</span>
+          <span id="cacheBadgeMobile" class="text-[10px] bg-emerald-50 text-emerald-700 px-2.5 py-2 rounded-xl font-bold border border-emerald-200/80 whitespace-nowrap hidden">
+            ⚡ Ter-cache
           </span>
         </div>
-        
-        <button onclick="forceRefreshData()" title="Sync Data" class="text-xs text-slate-500 hover:text-emerald-600 transition flex items-center gap-1 bg-slate-100/80 px-3 py-1.5 rounded-full font-medium border border-slate-200/40 active:scale-95">
-          🔄 <span class="hidden sm:inline">Sync Data</span>
-        </button>
+
+        <!-- TAMPILAN DESKTOP: DISPLAY BARIS -->
+        <div class="hidden sm:flex justify-between items-center gap-2 flex-wrap">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button onclick="openStatsModal()" title="Statistik Santri" class="text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
+              📊 Statistik
+            </button>
+
+            <button onclick="openMapModal()" title="Peta GIS Santri" class="text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
+              🗺️ Peta GIS
+            </button>
+
+            <button id="btnViewCompare" onclick="openCompareModal()" title="Bandingkan Santri" class="text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
+              ⚖️ Komparasi (<span id="compareCountLabel">0</span>)
+            </button>
+
+            <button id="btnViewBookmarks" onclick="showBookmarkedSantri()" title="Lihat Santri Bookmark" class="text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
+              ⭐ Bookmark (<span id="bookmarkCountLabel">0</span>)
+            </button>
+
+            <span id="cacheBadge" class="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-full font-semibold border border-slate-200/60 hidden">
+              ⚡ Ter-cache
+            </span>
+          </div>
+          
+          <button onclick="forceRefreshData()" title="Sync Data" class="text-xs text-slate-500 hover:text-emerald-600 transition flex items-center gap-1 bg-slate-100/80 px-3 py-1.5 rounded-full font-medium border border-slate-200/40 active:scale-95">
+            🔄 Sync Data
+          </button>
+        </div>
       </div>
 
       <!-- TITLE HEADER -->
       <div class="text-center mb-6 select-none">
         <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">Pencarian Data Santri</h1>
-        <p class="text-slate-400 mt-1 text-xs font-medium">Ketik minimal 3 karakter ID PPS atau Nama Santri</p>
+        <p class="text-slate-400 mt-1 text-xs font-medium">Ketik nama santri/ID PPS atau kata kunci (contoh: <span class="italic text-emerald-600">“tahfidz asal pasuruan kelas 1 aliyah”</span>)</p>
       </div>
 
-      <!-- SEARCH INPUT (iOS STYLE) -->
+      <!-- SEARCH INPUT -->
       <div class="relative flex items-center mb-4">
-        <input type="text" id="searchInput" placeholder="Cari ID PPS atau Nama..." 
+        <input type="text" id="searchInput" placeholder="Cari Nama Santri, ID, atau 'asal Semarang kelas 1 aliyah'..." 
                class="w-full pl-4 pr-24 py-3.5 bg-slate-100 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:bg-white text-sm transition shadow-inner disabled:opacity-60 selectable-text" 
                onkeyup="handleKeyPress(event)" disabled>
         <button onclick="lakukanPencarianFast(true)" id="searchBtn" disabled
                 class="absolute right-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-semibold text-xs transition shadow-md disabled:opacity-50 active:scale-95">
           Cari
         </button>
+      </div>
+
+      <!-- SMART QUERY BADGE INDICATOR -->
+      <div id="smartQueryBadge" class="hidden mb-4 p-2.5 bg-indigo-50 border border-indigo-200/60 rounded-xl text-xs text-indigo-800 flex items-center justify-between">
+        <span id="smartQueryText" class="font-medium">🔍 Smart Query Aktif</span>
+        <button onclick="resetSmartQuery()" class="text-[10px] font-bold text-indigo-600 hover:underline">Reset</button>
       </div>
 
       <!-- LOADING INDICATOR -->
@@ -141,6 +178,119 @@
       <!-- CONTAINER HASIL PENCARIAN -->
       <div id="infoMessage" class="mt-4"></div>
       <div id="resultContainer" class="mt-3"></div>
+    </div>
+  </div>
+
+  <!-- MODAL MENU POPUP UTAMA -->
+  <div id="featureMenuModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div id="featureMenuCard" class="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-200 flex flex-col relative">
+      <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4 sm:hidden"></div>
+      
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h3 class="text-base font-bold text-slate-800">✨ Menu Utama</h3>
+          <p class="text-[11px] text-slate-400">Pilih fitur yang ingin diakses</p>
+        </div>
+        <button onclick="closeFeatureMenuModal()" class="text-slate-400 hover:text-slate-700 bg-slate-100 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 gap-2.5">
+        <button onclick="closeFeatureMenuModal(); openStatsModal();" class="p-3.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-2xl text-left flex items-center justify-between transition active:scale-98">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">📊</span>
+            <div>
+              <div class="text-xs font-bold text-emerald-900">Analytics & Statistik</div>
+              <div class="text-[10px] text-emerald-700">Grafik sebaran santri & status</div>
+            </div>
+          </div>
+          <span class="text-xs text-emerald-600">➔</span>
+        </button>
+
+        <button onclick="closeFeatureMenuModal(); openMapModal();" class="p-3.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 rounded-2xl text-left flex items-center justify-between transition active:scale-98">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">🗺️</span>
+            <div>
+              <div class="text-xs font-bold text-indigo-900">Peta GIS Persebaran</div>
+              <div class="text-[10px] text-indigo-700">Peta interaktif daerah santri</div>
+            </div>
+          </div>
+          <span class="text-xs text-indigo-600">➔</span>
+        </button>
+
+        <button onclick="closeFeatureMenuModal(); openCompareModal();" class="p-3.5 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 rounded-2xl text-left flex items-center justify-between transition active:scale-98">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">⚖️</span>
+            <div>
+              <div class="text-xs font-bold text-rose-900">Komparasi Santri</div>
+              <div class="text-[10px] text-rose-700">Bandingkan atribut santri</div>
+            </div>
+          </div>
+          <span class="text-xs font-extrabold bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full" id="mobCompareCountLabel">0</span>
+        </button>
+
+        <button onclick="closeFeatureMenuModal(); showBookmarkedSantri();" class="p-3.5 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-2xl text-left flex items-center justify-between transition active:scale-98">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">⭐</span>
+            <div>
+              <div class="text-xs font-bold text-amber-900">Daftar Bookmark</div>
+              <div class="text-[10px] text-amber-700">Santri yang disimpan</div>
+            </div>
+          </div>
+          <span class="text-xs font-extrabold bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full" id="mobBookmarkCountLabel">0</span>
+        </button>
+
+        <button onclick="closeFeatureMenuModal(); openTableModal();" class="p-3.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl text-left flex items-center justify-between transition active:scale-98">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">📋</span>
+            <div>
+              <div class="text-xs font-bold text-slate-800">Database Tabel Lengkap</div>
+              <div class="text-[10px] text-slate-500">Semua data spreadsheet</div>
+            </div>
+          </div>
+          <span class="text-xs text-slate-600">➔</span>
+        </button>
+
+        <button onclick="closeFeatureMenuModal(); forceRefreshData();" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-center font-bold text-xs text-slate-600 transition active:scale-98 mt-1">
+          🔄 Sinkronisasi Ulang Data
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PETA GIS INTERAKTIF -->
+  <div id="mapModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[110] flex items-center justify-center p-3 sm:p-4 hidden">
+    <div id="mapModalCard" class="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden relative">
+      <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div>
+          <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+            🗺️ Peta GIS Persebaran Daerah Asal Santri
+          </h2>
+          <p class="text-[11px] text-slate-400">Klik lingkaran/pin di daerah untuk melihat nama-nama santri</p>
+        </div>
+        <button onclick="closeMapModal()" class="text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">✕</button>
+      </div>
+
+      <div class="p-2 flex-grow modal-scrollable flex flex-col items-center justify-start min-h-[400px]">
+        <div id="leafletMap" class="w-full h-[460px] rounded-2xl border border-slate-200 z-10"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL KOMPARASI SANTRI SIDE-BY-SIDE -->
+  <div id="compareModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[110] flex items-center justify-center p-3 sm:p-4 hidden">
+    <div id="compareModalCard" class="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden relative">
+      <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div>
+          <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+            ⚖️ Komparasi Data Santri Side-by-Side
+          </h2>
+          <p class="text-[11px] text-slate-400">Perbandingan atribut & status santri secara berdampingan</p>
+        </div>
+        <button onclick="closeCompareModal()" class="text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">✕</button>
+      </div>
+
+      <div id="compareTableWrapper" class="p-4 flex-grow modal-scrollable overflow-x-auto">
+      </div>
     </div>
   </div>
 
@@ -232,7 +382,7 @@
   </div>
 
   <!-- MODAL POPUP FILTER -->
-  <div id="filterModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] flex items-center justify-center p-4 hidden">
+  <div id="filterModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[130] flex items-center justify-center p-4 hidden">
     <div id="filterModalCard" class="bg-white rounded-3xl max-w-sm w-full p-4 shadow-2xl border border-slate-200 flex flex-col max-h-[85vh]">
       <div class="flex justify-between items-center mb-1">
         <h3 id="filterModalTitle" class="text-sm font-bold text-slate-800">Filter</h3>
@@ -325,17 +475,14 @@
       tahfidzMap: {}
     };
 
-    // HYBRID STORAGE SYSTEM (INDEXEDDB DENGAN LOCALSTORAGE FALLBACK)
+    // HYBRID STORAGE SYSTEM
     const HybridStore = {
       get: function(key) {
         return new Promise((resolve) => {
-          // 1. Coba baca dari IndexedDB
           if (window.idbKeyval) {
             idbKeyval.get(key).then(val => {
-              if (val) {
-                resolve(val);
-              } else {
-                // Read LocalStorage Fallback
+              if (val) resolve(val);
+              else {
                 const loc = localStorage.getItem(key);
                 resolve(loc ? JSON.parse(loc) : null);
               }
@@ -351,14 +498,10 @@
       },
       set: function(key, val) {
         return new Promise((resolve) => {
-          // Simpan ringkasan metadata ke LocalStorage
           try {
-            if (key === 'SANTRI_BOOKMARKS') {
-              localStorage.setItem(key, JSON.stringify(val));
-            }
+            if (key === 'SANTRI_BOOKMARKS') localStorage.setItem(key, JSON.stringify(val));
           } catch(e) {}
 
-          // Simpan data utama ke IndexedDB
           if (window.idbKeyval) {
             idbKeyval.set(key, val).then(() => resolve(true)).catch(() => {
               try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
@@ -371,6 +514,20 @@
         });
       }
     };
+
+    // FEATURE MENU MODAL
+    function openFeatureMenuModal() {
+      const modal = document.getElementById('featureMenuModal');
+      const card = document.getElementById('featureMenuCard');
+      card.classList.remove('animate-ios-modal');
+      void card.offsetWidth;
+      card.classList.add('animate-ios-modal');
+      modal.classList.remove('hidden');
+    }
+
+    function closeFeatureMenuModal() {
+      document.getElementById('featureMenuModal').classList.add('hidden');
+    }
 
     // BOOKMARK SYSTEM
     let bookmarkedPpsSet = new Set();
@@ -415,7 +572,9 @@
 
     function updateBookmarkBadgeCount() {
       const label = document.getElementById('bookmarkCountLabel');
+      const mobLabel = document.getElementById('mobBookmarkCountLabel');
       if (label) label.innerText = bookmarkedPpsSet.size;
+      if (mobLabel) mobLabel.innerText = bookmarkedPpsSet.size;
     }
 
     function showBookmarkedSantri() {
@@ -443,6 +602,123 @@
       renderCurrentCard();
     }
 
+    // KOMPARASI SANTRI SIDE-BY-SIDE
+    let comparePpsSet = new Set();
+
+    function toggleCompare(event, idPps) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      if (!idPps) return;
+
+      const cleanId = String(idPps).trim();
+      if (comparePpsSet.has(cleanId)) {
+        comparePpsSet.delete(cleanId);
+        showIosToastSimple("⚖️ KOMPARASI", "Dihapus dari perbandingan.");
+      } else {
+        if (comparePpsSet.size >= 4) {
+          showIosToastSimple("⚠️ KOMPARASI", "Maksimal membandingkan 4 santri sekaligus.");
+          return;
+        }
+        comparePpsSet.add(cleanId);
+        showIosToastSimple("⚖️ KOMPARASI", "Ditambahkan ke daftar komparasi!");
+      }
+      updateCompareBadgeCount();
+      renderCurrentCard();
+    }
+
+    function updateCompareBadgeCount() {
+      const label = document.getElementById('compareCountLabel');
+      const mobLabel = document.getElementById('mobCompareCountLabel');
+      if (label) label.innerText = comparePpsSet.size;
+      if (mobLabel) mobLabel.innerText = comparePpsSet.size;
+    }
+
+    function openCompareModal() {
+      if (comparePpsSet.size === 0) {
+        showIosToastSimple("⚖️ KOMPARASI", "Pilih minimal 1 santri untuk dikomparasi.");
+        return;
+      }
+
+      const modal = document.getElementById('compareModal');
+      const modalCard = document.getElementById('compareModalCard');
+      const tableWrapper = document.getElementById('compareTableWrapper');
+
+      let selectedSantris = DB.dataUtama.filter(row => {
+        const idPps = row[0] ? String(row[0]).trim() : '';
+        return comparePpsSet.has(idPps);
+      });
+
+      if (selectedSantris.length === 0) {
+        showIosToastSimple("⚖️ KOMPARASI", "Data santri tidak ditemukan.");
+        return;
+      }
+
+      let tableHtml = `<table class="w-full text-left text-xs border-collapse"><thead><tr class="bg-slate-100 text-slate-700 border-b border-slate-200"><th class="p-3 font-bold bg-slate-200/80 sticky left-0 z-20">Atribut Data</th>`;
+
+      selectedSantris.forEach((s) => {
+        const pps = s[0] ? String(s[0]).trim() : '-';
+        const nama = s[1] ? String(s[1]).trim() : 'Santri';
+
+        let badges = [];
+        if (DB.mutaallimMap[pps]) badges.push(`<span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-amber-100 text-amber-800">Muta'allim</span>`);
+        if (DB.mualimMap[pps]) badges.push(`<span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-blue-100 text-blue-800">Mu'allim</span>`);
+        if (DB.tahfidzMap[pps]) badges.push(`<span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-emerald-100 text-emerald-800">Tahfidz</span>`);
+        if (badges.length === 0) badges.push(`<span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-slate-200 text-slate-700">Regular</span>`);
+
+        tableHtml += `<th class="p-3 font-bold min-w-[200px] bg-emerald-50 text-emerald-900 border-l border-slate-200">
+          <div class="flex justify-between items-center mb-1">
+            <span class="truncate font-extrabold text-sm">${escapeHTML(nama)}</span>
+            <button onclick="toggleCompare(null, '${escapeHTML(pps)}'); openCompareModal();" class="text-xs text-rose-500 font-bold hover:bg-rose-100 rounded-full w-5 h-5 flex items-center justify-center">✕</button>
+          </div>
+          <div class="text-[10px] text-emerald-700 mb-1">ID PPS: ${escapeHTML(pps)}</div>
+          <div class="flex flex-wrap gap-1">${badges.join(' ')}</div>
+        </th>`;
+      });
+      tableHtml += `</tr></thead><tbody class="divide-y divide-slate-100">`;
+
+      tableHtml += `<tr class="bg-emerald-50/50"><td class="p-2.5 font-bold text-emerald-800 bg-emerald-100/60 sticky left-0 z-10 border-r border-slate-200">Status Program</td>`;
+      selectedSantris.forEach(s => {
+        const pps = s[0] ? String(s[0]).trim() : '';
+        let listProg = [];
+        if (DB.mutaallimMap[pps]) listProg.push("Muta'allim");
+        if (DB.mualimMap[pps]) listProg.push("Mu'allim");
+        if (DB.tahfidzMap[pps]) listProg.push("Tahfidz");
+        if (listProg.length === 0) listProg.push("Regular");
+
+        tableHtml += `<td class="p-2.5 font-bold text-emerald-900 border-l border-slate-200">${listProg.join(', ')}</td>`;
+      });
+      tableHtml += `</tr>`;
+
+      DB.headersUtama.forEach((header, hIdx) => {
+        let hName = header.toUpperCase().trim();
+        if (hName === 'FOTO' || hName.includes('KONTAK') || hName.includes('WALI') || hName === 'WA' || hName.includes('NO WA') || hName.includes('TELEPON')) {
+          return; 
+        }
+
+        tableHtml += `<tr class="hover:bg-slate-50 transition"><td class="p-2.5 font-semibold text-slate-500 bg-slate-50/80 sticky left-0 z-10 border-r border-slate-200">${escapeHTML(header)}</td>`;
+
+        selectedSantris.forEach(s => {
+          const val = (s[hIdx] !== undefined && s[hIdx] !== null && String(s[hIdx]).trim() !== '') ? escapeHTML(s[hIdx]) : '-';
+          tableHtml += `<td class="p-2.5 text-slate-800 border-l border-slate-100 selectable-text">${val}</td>`;
+        });
+        tableHtml += `</tr>`;
+      });
+
+      tableHtml += `</tbody></table>`;
+      tableWrapper.innerHTML = tableHtml;
+
+      modalCard.classList.remove('animate-ios-modal');
+      void modalCard.offsetWidth;
+      modalCard.classList.add('animate-ios-modal');
+      modal.classList.remove('hidden');
+    }
+
+    function closeCompareModal() {
+      document.getElementById('compareModal').classList.add('hidden');
+    }
+
     function showIosToastSimple(title, message) {
       const toast = document.getElementById('iosToast');
       const ppsEl = document.getElementById('toastPps');
@@ -450,7 +726,7 @@
       const detailEl = document.getElementById('toastDetail');
 
       ppsEl.innerText = title;
-      namaEl.innerText = "Info Bookmark";
+      namaEl.innerText = "Sistem Notifikasi";
       detailEl.innerText = message;
 
       toast.classList.remove('-translate-y-24', 'opacity-0', 'pointer-events-none');
@@ -463,7 +739,6 @@
       }, 2500);
     }
 
-    // ONLOAD DENGAN FLOW BACKGROUND SYNC MURNI DARI FILE ASLI
     window.onload = function() {
       initFabDrag();
       loadBookmarks();
@@ -480,7 +755,6 @@
       });
     };
 
-    // 1. Fungsi Fetch Data Utama
     function fetchDataFromServer(showLoadingUI) {
       if (showLoadingUI) document.getElementById('loading').classList.remove('hidden');
 
@@ -502,10 +776,8 @@
         });
     }
 
-    // 2. Fungsi Background Sync (Proses pembaruan diam-diam)
     function syncDataInBackground() {
       showStatusBadge("Memeriksa pembaruan...");
-      
       const cacheBuster = (API_URL.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
 
       fetch(API_URL + cacheBuster, { cache: 'no-store' })
@@ -520,19 +792,22 @@
         });
     }
 
-    // 3. Fungsi Tombol Sync Manual
     function forceRefreshData() {
       document.getElementById('loadingText').innerText = "Memperbarui database...";
       document.getElementById('loading').classList.remove('hidden');
       fetchDataFromServer(true);
     }
 
-    // 4. Fungsi Menampilkan Indikator Status
     function showStatusBadge(text) {
       const badge = document.getElementById('cacheBadge');
+      const mobBadge = document.getElementById('cacheBadgeMobile');
       if (badge) {
         badge.innerText = text;
         badge.classList.remove('hidden');
+      }
+      if (mobBadge) {
+        mobBadge.innerText = text;
+        mobBadge.classList.remove('hidden');
       }
     }
 
@@ -547,11 +822,12 @@
       document.getElementById('searchInput').disabled = false;
       document.getElementById('searchBtn').disabled = false;
 
-      if (isFromCache) document.getElementById('cacheBadge').classList.remove('hidden');
+      if (isFromCache) showStatusBadge("Data Ter-cache");
 
       prepareUnifiedTableData();
       populateStatsColumnSelector();
       updateBookmarkBadgeCount();
+      updateCompareBadgeCount();
     }
 
     let searchTimeout = null;
@@ -567,29 +843,168 @@
       }
     }
 
-    // PENCARIAN HALAMAN UTAMA: MURNI DENGAN .includes() PERSIS KODE ASLI
+    /* =========================================================================
+       ALGORITMA SMART QUERY DINAMIS & PENCOCOKAN PERSISI KOLOM
+       ========================================================================= */
+    function parseNaturalLanguageQuery(queryStr) {
+      let clean = queryStr.toLowerCase().trim();
+      
+      let filterObj = {
+        status: null,
+        domisili: null,
+        kelas: null,
+        nameKeyword: '',
+        keywordRaw: queryStr
+      };
+
+      // 1. DETEKSI STATUS PROGRAM
+      if (/\btahfidz\b/i.test(clean)) {
+        filterObj.status = 'TAHFIDZ';
+        clean = clean.replace(/\btahfidz\b/gi, ' ');
+      } else if (/\bmuta['`]?allim\b/i.test(clean)) {
+        filterObj.status = 'MUTAALLIM';
+        clean = clean.replace(/\bmuta['`]?allim\b/gi, ' ');
+      } else if (/\bmu['`]?allim\b/i.test(clean)) {
+        filterObj.status = 'MUALIM';
+        clean = clean.replace(/\bmu['`]?allim\b/gi, ' ');
+      }
+
+      // 2. DETEKSI DOMISILI (Asal / Dari / Kabupaten / Kota)
+      const asalRegex = /(?:asal|dari|kabupaten|kota)\s+([\w\s]+?)(?=\s+\b(kelas|tingkat|tahfidz|mutaallim|mualim|ruang)\b|$)/i;
+      const asalMatch = clean.match(asalRegex);
+      if (asalMatch) {
+        filterObj.domisili = asalMatch[1].trim();
+        clean = clean.replace(asalMatch[0], ' ');
+      }
+
+      // 3. DETEKSI KELAS / TINGKAT / MARHALAH
+      const kelasRegex = /(?:kelas|tingkat|marhalah|jilid)\s+([\w\s]+?)(?=\s+\b(asal|dari|kabupaten|kota|tahfidz|mutaallim|mualim|ruang)\b|$)/i;
+      const kelasMatch = clean.match(kelasRegex);
+      if (kelasMatch) {
+        filterObj.kelas = kelasMatch[1].trim();
+        clean = clean.replace(kelasMatch[0], ' ');
+      }
+
+      // 4. SISA KATA DITANGKAP SEBAGAI NAMA SANTRI ATAU ID PPS
+      clean = clean.replace(/\b(santri|data|cari|tolong|tampilkan)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+      if (clean.length > 0) {
+        filterObj.nameKeyword = clean;
+      }
+
+      return filterObj;
+    }
+
+    function resetSmartQuery() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('smartQueryBadge').classList.add('hidden');
+      lakukanPencarianFast(true);
+    }
+
     function lakukanPencarianFast(isForce) {
       const inputEl = document.getElementById('searchInput');
       const keyword = inputEl.value.toLowerCase().trim();
       const container = document.getElementById('resultContainer');
       const infoMsg = document.getElementById('infoMessage');
+      const smartBadge = document.getElementById('smartQueryBadge');
+      const smartText = document.getElementById('smartQueryText');
 
       container.innerHTML = '';
       infoMsg.innerHTML = '';
       searchResults = [];
       currentCardIndex = 0;
 
-      if (!keyword) return;
-      if (!isForce && keyword.length < 3) return;
+      if (!keyword) {
+        smartBadge.classList.add('hidden');
+        return;
+      }
+      if (!isForce && keyword.length < 2) return;
 
       container.innerHTML = `<div class="text-center text-emerald-600 py-6 text-xs font-medium animate-pulse">Memproses data...</div>`;
 
       setTimeout(() => {
-        searchResults = DB.dataUtama.filter(row => {
-          const idPps = row[0] ? String(row[0]).toLowerCase().trim() : '';
-          const nama = row[1] ? String(row[1]).toLowerCase().trim() : '';
-          return idPps.includes(keyword) || nama.includes(keyword);
-        });
+        const smartParsed = parseNaturalLanguageQuery(keyword);
+        const hasStructuredFilter = smartParsed.status || smartParsed.domisili || smartParsed.kelas;
+
+        if (hasStructuredFilter) {
+          let badgeInfo = [];
+          if (smartParsed.status) badgeInfo.push(`Status: ${smartParsed.status}`);
+          if (smartParsed.domisili) badgeInfo.push(`Daerah: ${smartParsed.domisili}`);
+          if (smartParsed.kelas) badgeInfo.push(`Kelas: ${smartParsed.kelas}`);
+          if (smartParsed.nameKeyword) badgeInfo.push(`Nama/ID: ${smartParsed.nameKeyword}`);
+
+          smartText.innerHTML = `🤖 <strong>Smart Query Aktif:</strong> ${badgeInfo.join(' | ')}`;
+          smartBadge.classList.remove('hidden');
+
+          // AMBIL INDEKS KOLOM SECARA DINAMIS LANGSUNG DARI SPREADSHEET
+          const locationHeaderIndexes = [];
+          const classHeaderIndexes = [];
+
+          DB.headersUtama.forEach((h, idx) => {
+            const headerUpper = h.toUpperCase().trim();
+            if (headerUpper.includes('KABUPATEN') || headerUpper.includes('KOTA') || headerUpper.includes('PROVINSI') || headerUpper.includes('DOMISILI')) {
+              locationHeaderIndexes.push(idx);
+            }
+            if (headerUpper.includes('KELAS') || headerUpper.includes('TINGKAT') || headerUpper.includes('RUANG') || headerUpper.includes('MARHALAH') || headerUpper.includes('JILID')) {
+              classHeaderIndexes.push(idx);
+            }
+          });
+
+          searchResults = DB.dataUtama.filter(row => {
+            const idPps = row[0] ? String(row[0]).trim() : '';
+            const nama = row[1] ? String(row[1]).trim() : '';
+
+            // 1. FILTER STATUS
+            let passStatus = true;
+            if (smartParsed.status === 'TAHFIDZ') passStatus = DB.tahfidzMap.hasOwnProperty(idPps);
+            if (smartParsed.status === 'MUTAALLIM') passStatus = DB.mutaallimMap.hasOwnProperty(idPps);
+            if (smartParsed.status === 'MUALIM') passStatus = DB.mualimMap.hasOwnProperty(idPps);
+
+            // 2. FILTER DOMISILI (Khusus Kolom Lokasi)
+            let passDomisili = true;
+            if (smartParsed.domisili) {
+              const domisiliTokens = smartParsed.domisili.toLowerCase().split(/\s+/);
+              const combinedLocationText = locationHeaderIndexes.map(idx => String(row[idx] || '').toLowerCase()).join(' ');
+
+              passDomisili = domisiliTokens.every(tok => combinedLocationText.includes(tok));
+            }
+
+            // 3. FILTER KELAS / TINGKAT (Strict Word & Digit Boundary Matching)
+            let passKelas = true;
+            if (smartParsed.kelas) {
+              const classTokens = smartParsed.kelas.toLowerCase().split(/\s+/);
+              const combinedClassText = classHeaderIndexes.map(idx => String(row[idx] || '').toLowerCase()).join(' ');
+
+              passKelas = classTokens.every(token => {
+                // Jika token berupa angka (misal "1"), gunakan pencocokan kata utuh (\b1\b) agar tidak mencocokkan "2" atau ID PPS
+                if (/^\d+$/.test(token)) {
+                  const digitRegex = new RegExp(`\\b${token}\\b`, 'i');
+                  return digitRegex.test(combinedClassText);
+                } else {
+                  return combinedClassText.includes(token);
+                }
+              });
+            }
+
+            // 4. FILTER NAMA ATAU ID PPS
+            let passName = true;
+            if (smartParsed.nameKeyword) {
+              const kw = smartParsed.nameKeyword.toLowerCase();
+              passName = idPps.toLowerCase().includes(kw) || nama.toLowerCase().includes(kw);
+            }
+
+            return passStatus && passDomisili && passKelas && passName;
+          });
+        } else {
+          // PENCARIAN STANDAR/BEBAS (NAMA SANTRI ATAU ID PPS)
+          smartBadge.classList.add('hidden');
+          const kw = keyword.toLowerCase();
+          searchResults = DB.dataUtama.filter(row => {
+            const idPps = row[0] ? String(row[0]).toLowerCase().trim() : '';
+            const nama = row[1] ? String(row[1]).toLowerCase().trim() : '';
+            const rowFullText = row.map(cell => String(cell || '').toLowerCase()).join(' ');
+            return idPps.includes(kw) || nama.includes(kw) || rowFullText.includes(kw);
+          });
+        }
 
         if (searchResults.length === 0) {
           container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-2xl">Data santri tidak ditemukan.</div>`;
@@ -600,7 +1015,6 @@
       }, 10);
     }
 
-    // LOGIKA TANGGAL LAHIR (DDMMYYYY)
     function getFormattedBirthDate(row, headers) {
       if (!row || !headers) return '';
 
@@ -662,16 +1076,10 @@
         if (!val) return;
 
         if ((hClean.includes('TANGGAL') || hClean.includes('TGL')) && !hClean.includes('TEMPAT') && !hClean.includes('TTL') && !hClean.includes('BULAN') && !hClean.includes('TAHUN')) {
-          if (val.length <= 2 || /^\d{1,2}$/.test(val)) {
-            tglVal = val;
-          }
+          if (val.length <= 2 || /^\d{1,2}$/.test(val)) tglVal = val;
         }
-        if (hClean.includes('BULAN') || hClean.includes('BLN')) {
-          blnVal = val;
-        }
-        if (hClean.includes('TAHUN') || hClean.includes('THN')) {
-          thnVal = val;
-        }
+        if (hClean.includes('BULAN') || hClean.includes('BLN')) blnVal = val;
+        if (hClean.includes('TAHUN') || hClean.includes('THN')) thnVal = val;
       });
 
       if (tglVal) day = cleanDay(tglVal);
@@ -711,9 +1119,7 @@
         });
       }
 
-      if (day && month && year) {
-        return `${day}${month}${year}`;
-      }
+      if (day && month && year) return `${day}${month}${year}`;
       return '';
     }
 
@@ -806,10 +1212,12 @@
       const navHint = total > 1 ? `<div class="text-[10px] text-slate-400 text-center mt-3 pt-2 border-t border-slate-100 flex items-center justify-center gap-1 select-none"><span>👈 Usap / ketuk tepi kartu untuk berpindah 👉</span></div>` : '';
 
       const bookmarked = isBookmarked(idPps);
-      const bookmarkBtnClass = bookmarked
-        ? 'bg-amber-500 text-white hover:bg-amber-600 border-amber-500'
-        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200';
+      const bookmarkBtnClass = bookmarked ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200';
       const bookmarkIconText = bookmarked ? '★ Bookmark' : '☆ Bookmark';
+
+      const compared = comparePpsSet.has(idPps);
+      const compareBtnClass = compared ? 'bg-rose-600 text-white border-rose-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200';
+      const compareIconText = compared ? '✓ Komparasi' : '⚖️ Komparasi';
 
       const card = `
       <div class="card-perspective relative">
@@ -825,7 +1233,6 @@
           </button>
 
           <div class="flex items-center gap-4 pb-4 border-b border-slate-100 pr-20">
-            <!-- KLIK THUMBNAIL FOTO UNTUK ZOOM POPUP BOUNCE -->
             <div class="relative group cursor-pointer flex-shrink-0" onclick="openPhotoModal()">
               ${safeFotoUrl ? `
                 <img src="${safeFotoUrl}" alt="Thumbnail Santri" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm hover:scale-105 transition-transform">
@@ -852,18 +1259,25 @@
 
           ${statusSectionsHtml}
 
-          <!-- FOOTER KARTU: TOMBOL BOOKMARK BINTANG MENGGANTIKAN LIHAT FOTO -->
-          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
             <div class="flex items-center gap-2">
               <span class="text-[11px] text-slate-400 font-medium mr-1 select-none">Hubungi:</span>
               ${buatTombolWA(infoKontakWali)}
             </div>
 
-            <button onclick="toggleBookmark(event, '${escapeHTML(idPps)}')" 
-                    class="text-xs font-bold ${bookmarkBtnClass} px-3 py-1.5 rounded-xl border shadow-sm transition flex items-center gap-1.5 active:scale-95 select-none" 
-                    title="Simpan Santri ke Bookmark">
-              ${bookmarkIconText}
-            </button>
+            <div class="flex items-center gap-1.5">
+              <button onclick="toggleCompare(event, '${escapeHTML(idPps)}')" 
+                      class="text-xs font-bold ${compareBtnClass} px-2.5 py-1.5 rounded-xl border shadow-sm transition flex items-center gap-1 active:scale-95 select-none" 
+                      title="Tambah ke Komparasi">
+                ${compareIconText}
+              </button>
+              
+              <button onclick="toggleBookmark(event, '${escapeHTML(idPps)}')" 
+                      class="text-xs font-bold ${bookmarkBtnClass} px-2.5 py-1.5 rounded-xl border shadow-sm transition flex items-center gap-1 active:scale-95 select-none" 
+                      title="Simpan Santri ke Bookmark">
+                ${bookmarkIconText}
+              </button>
+            </div>
           </div>
 
           ${navHint}
@@ -1095,6 +1509,147 @@
       document.getElementById('photoModal').classList.add('hidden');
     }
 
+    /* =========================================================================
+       PETA GIS PERSEBARAN SANTRI
+       ========================================================================= */
+    let leafletMapInstance = null;
+    let leafletMarkerGroup = null;
+
+    const CITY_COORDS = {
+      'surabaya': [-7.2575, 112.7521], 'pasuruan': [-7.6453, 112.9075],
+      'malang': [-7.9666, 112.6326], 'sidoarjo': [-7.4478, 112.7183],
+      'gresik': [-7.1566, 112.6555], 'kediri': [-7.8480, 112.0178],
+      'jember': [-8.1724, 113.7003], 'banyuwangi': [-8.2192, 114.3691],
+      'probolinggo': [-7.7543, 113.2159], 'bangkalan': [-7.0455, 112.7351],
+      'sampang': [-7.1895, 113.2394], 'pamekasan': [-7.1606, 113.4828],
+      'sumenep': [-7.0167, 113.8667], 'lumajang': [-8.1331, 113.2248],
+      'bondowoso': [-7.9135, 113.8213], 'situbondo': [-7.7061, 114.0049],
+      'tuban': [-6.8967, 112.0472], 'lamongan': [-7.1186, 112.4162],
+      'bojonegoro': [-7.1502, 111.8818], 'jombang': [-7.5460, 112.2331],
+      'mojokerto': [-7.4722, 112.4337], 'nganjuk': [-7.6042, 111.9015],
+      'madiun': [-7.6298, 111.5239], 'magetan': [-7.6531, 111.3283],
+      'ngawi': [-7.4039, 111.4461], 'ponorogo': [-7.8681, 111.4616],
+      'pacitan': [-8.2066, 111.0921], 'trenggalek': [-8.0500, 111.7167],
+      'tulungagung': [-8.0667, 111.9000], 'blitar': [-8.0983, 112.1681],
+      'semarang': [-6.9666, 110.4167], 'solo': [-7.5666, 110.8167],
+      'surakarta': [-7.5666, 110.8167], 'yogyakarta': [-7.7956, 110.3695],
+      'jogja': [-7.7956, 110.3695], 'bandung': [-6.9175, 107.6191],
+      'jakarta': [-6.2088, 106.8456]
+    };
+
+    function openMapModal() {
+      if (unifiedTableData.length === 0) prepareUnifiedTableData();
+
+      const modal = document.getElementById('mapModal');
+      const modalCard = document.getElementById('mapModalCard');
+
+      modalCard.classList.remove('animate-ios-modal');
+      void modalCard.offsetWidth;
+      modalCard.classList.add('animate-ios-modal');
+      modal.classList.remove('hidden');
+
+      setTimeout(() => {
+        initLeafletMap();
+      }, 200);
+    }
+
+    function closeMapModal() {
+      document.getElementById('mapModal').classList.add('hidden');
+    }
+
+    // REDIRECT PETA GIS
+    function filterByCityFromMap(cityName) {
+      closeMapModal();
+      const inputEl = document.getElementById('searchInput');
+      inputEl.value = "asal " + cityName;
+      lakukanPencarianFast(true);
+    }
+
+    function initLeafletMap() {
+      if (!leafletMapInstance) {
+        leafletMapInstance = L.map('leafletMap').setView([-7.5, 112.5], 8);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 18,
+          attribution: '© OpenStreetMap'
+        }).addTo(leafletMapInstance);
+      }
+
+      leafletMapInstance.invalidateSize();
+
+      if (leafletMarkerGroup) {
+        leafletMapInstance.removeLayer(leafletMarkerGroup);
+      }
+      leafletMarkerGroup = L.layerGroup().addTo(leafletMapInstance);
+
+      let kabupatenIdx = DB.headersUtama.findIndex(h => {
+        let name = h.toUpperCase().trim();
+        return name.includes('KABUPATEN') || name.includes('KOTA') || name.includes('PROVINSI');
+      });
+
+      if (kabupatenIdx === -1) {
+        kabupatenIdx = DB.headersUtama.findIndex(h => h.toUpperCase().trim().includes('DOMISILI'));
+      }
+
+      let citySantriMap = {};
+
+      DB.dataUtama.forEach(r => {
+        let rawVal = (kabupatenIdx !== -1 && r[kabupatenIdx]) ? String(r[kabupatenIdx]).toLowerCase().trim() : '';
+        if (!rawVal) return;
+
+        let namaSantri = r[1] ? String(r[1]).trim() : 'Santri';
+        let idPps = r[0] ? String(r[0]).trim() : '';
+
+        for (let cityKey in CITY_COORDS) {
+          if (rawVal.includes(cityKey)) {
+            if (!citySantriMap[cityKey]) citySantriMap[cityKey] = [];
+            citySantriMap[cityKey].push({ nama: namaSantri, pps: idPps });
+            break;
+          }
+        }
+      });
+
+      let bounds = [];
+
+      for (let cityKey in citySantriMap) {
+        const list = citySantriMap[cityKey];
+        const coords = CITY_COORDS[cityKey];
+        const cityName = cityKey.charAt(0).toUpperCase() + cityKey.slice(1);
+        bounds.push(coords);
+
+        let listNamesHtml = list.slice(0, 5).map(s => `• <b>${escapeHTML(s.nama)}</b> (${escapeHTML(s.pps)})`).join('<br>');
+        if (list.length > 5) {
+          listNamesHtml += `<br><i class="text-slate-400">...dan ${list.length - 5} santri lainnya</i>`;
+        }
+
+        const popupContent = `
+          <div class="text-xs p-1 select-none">
+            <h4 class="font-bold text-emerald-800 text-sm mb-0.5">${cityName}</h4>
+            <div class="text-slate-500 font-semibold mb-2">Total: ${list.length} Santri</div>
+            <div class="max-h-32 overflow-y-auto mb-3 bg-slate-50 p-2 rounded-xl border border-slate-200 text-[11px] leading-relaxed">
+              ${listNamesHtml}
+            </div>
+            <button onclick="filterByCityFromMap('${cityName}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded-xl transition text-[11px] shadow">
+              🔍 Tampilkan Semua Santri Daerah Ini
+            </button>
+          </div>
+        `;
+
+        const circle = L.circleMarker(coords, {
+          color: '#047857',
+          fillColor: '#10b981',
+          fillOpacity: 0.7,
+          radius: Math.min(Math.max(list.length * 2.5, 10), 32)
+        });
+
+        circle.bindPopup(popupContent, { maxWidth: 260 });
+        leafletMarkerGroup.addLayer(circle);
+      }
+
+      if (bounds.length > 0) {
+        leafletMapInstance.fitBounds(bounds, { padding: [30, 30] });
+      }
+    }
+
     // DATABASE TABLE & FILTERING
     let unifiedTableHeaders = [];
     let unifiedTableData = [];
@@ -1107,7 +1662,6 @@
     let currentHeaderUniqueValues = [];
     let currentModalSelectedSet = new Set();
 
-    // ENGINE FUSE.JS KHUSUS POP-UP TABEL DENGAN DEBOUNCE
     let tableNameSearchTimeout = null;
     let tableNameSearchKeyword = "";
     let fuseTableInstance = null;
@@ -1480,6 +2034,7 @@
     let fabMoved = false;
     function initFabDrag() {
       const fab = document.getElementById('fabTable');
+      if (!fab) return;
       let isDragging = false;
       let startX, startY, initialX = 0, initialY = 0;
 
