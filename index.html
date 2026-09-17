@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Pencarian Data Santri</title>
   
-  <!-- Tailwind CSS & Chart.js CDN (Tips: Untuk produksi, compile CSS statis via Tailwind CLI agar hemat CPU/RAM) -->
+  <!-- Tailwind CSS & Chart.js CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
@@ -25,7 +25,7 @@
       overflow: hidden;
       overscroll-behavior: none;
       touch-action: none;
-      background-color: #f1f5f9;
+      background-color: #f8fafc;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
@@ -46,17 +46,27 @@
       animation: iosPop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    /* FLIP CARD ANIMATION */
-    .card-perspective { perspective: 1000px; }
-    .card-flip-container {
-      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
-      transform-style: preserve-3d;
-      backface-visibility: hidden;
+    /* HORIZONTAL SMOOTH SLIDE CARD ANIMATION (iOS / STORY STYLE) */
+    .card-slide-container {
+      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform, opacity;
     }
-    .flip-out-left { transform: rotateY(-70deg) scale(0.92); opacity: 0; }
-    .flip-in-left { transform: rotateY(70deg) scale(0.92); opacity: 0; }
-    .flip-out-right { transform: rotateY(70deg) scale(0.92); opacity: 0; }
-    .flip-in-right { transform: rotateY(-70deg) scale(0.92); opacity: 0; }
+    .slide-out-left {
+      opacity: 0;
+      transform: translateX(-48px) scale(0.96);
+    }
+    .slide-out-right {
+      opacity: 0;
+      transform: translateX(48px) scale(0.96);
+    }
+    .slide-in-right {
+      opacity: 0;
+      transform: translateX(48px) scale(0.96);
+    }
+    .slide-in-left {
+      opacity: 0;
+      transform: translateX(-48px) scale(0.96);
+    }
 
     /* CUSTOM SCROLLBAR iOS STYLE */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -86,88 +96,37 @@
     <div id="toastDetail" class="text-slate-600 bg-slate-100/90 p-2.5 rounded-xl border border-slate-200/50 font-medium text-xs selectable-text"></div>
   </div>
 
-  <!-- TOMBOL IKON MELAYANG (FAB TABEL) - DESKTOP ONLY -->
-  <button id="fabTable" onclick="handleFabClick(event)" class="hidden sm:flex fixed bottom-6 right-6 z-40 bg-emerald-600/90 hover:bg-emerald-600 active:scale-95 text-white p-4 rounded-full shadow-2xl backdrop-blur-lg items-center justify-center transition-all border border-emerald-400/40" title="Buka Database">
-    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 10h18M3 14h18M3 18h18M3 6h18"></path>
-    </svg>
-  </button>
+  <!-- TOP COMPACT APP TITLE BAR -->
+  <header class="w-full bg-white/80 backdrop-blur-md border-b border-slate-200/60 px-4 py-2.5 fixed top-0 inset-x-0 z-20 flex justify-between items-center shadow-sm">
+    <div class="flex items-center gap-2">
+      <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+      <span class="font-extrabold text-sm text-slate-800 tracking-tight">Pencarian Santri</span>
+    </div>
+
+    <!-- QUICK DESKTOP BUTTONS -->
+    <div class="hidden sm:flex items-center gap-1.5">
+      <button onclick="openStatsModal()" title="Statistik" class="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition shadow-sm active:scale-95">📊 Statistik</button>
+      <button onclick="openMapModal()" title="Peta GIS" class="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition shadow-sm active:scale-95">🗺️ Peta</button>
+      <button onclick="openCompareModal()" title="Komparasi" class="text-xs font-semibold bg-rose-50 text-rose-700 px-3 py-1.5 rounded-full transition shadow-sm active:scale-95">⚖️ Komparasi (<span id="compareCountLabel">0</span>)</button>
+      <button onclick="showBookmarkedSantri()" title="Bookmark" class="text-xs font-semibold bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full transition shadow-sm active:scale-95">⭐ Bookmark (<span id="bookmarkCountLabel">0</span>)</button>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span id="cacheBadge" class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full font-bold border border-emerald-200 hidden">
+        ⚡ Ter-cache
+      </span>
+      <button onclick="forceRefreshData()" class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition active:scale-95" title="Sinkronkan Data">
+        🔄
+      </button>
+    </div>
+  </header>
 
   <!-- CONTAINER SCROLL UTAMA -->
-  <div id="scrollableArea" class="p-3 sm:p-6 md:p-8">
-    <div class="max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl p-4 sm:p-6 border border-slate-200 my-2">
-      
-      <!-- TOP ACTION BAR DESKTOP & MOBILE MENU TRIGGER -->
-      <div class="mb-5">
-        <!-- TAMPILAN MOBILE: TOMBOL TUNGGAL -->
-        <div class="flex sm:hidden justify-between items-center gap-2">
-          <button onclick="openFeatureMenuModal()" class="w-full bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-semibold text-xs py-2 px-3.5 rounded-xl flex items-center justify-between border border-slate-200/80 shadow-sm active:scale-98 transition">
-            <span class="flex items-center gap-2 font-bold text-slate-800 text-xs">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Fitur Aplikasi</span>
-            </span>
-            <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-lg">Pilih ▾</span>
-          </button>
-          <span id="cacheBadgeMobile" class="text-[10px] bg-emerald-50 text-emerald-700 px-2.5 py-2 rounded-xl font-bold border border-emerald-200/80 whitespace-nowrap hidden">
-            ⚡ Ter-cache
-          </span>
-        </div>
-
-        <!-- TAMPILAN DESKTOP: DISPLAY BARIS -->
-        <div class="hidden sm:flex justify-between items-center gap-2 flex-wrap">
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <button onclick="openStatsModal()" title="Statistik Santri" class="text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
-              📊 Statistik
-            </button>
-
-            <button onclick="openMapModal()" title="Peta GIS Santri" class="text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
-              🗺️ Peta GIS
-            </button>
-
-            <button id="btnViewCompare" onclick="openCompareModal()" title="Bandingkan Santri" class="text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
-              ⚖️ Komparasi (<span id="compareCountLabel">0</span>)
-            </button>
-
-            <button id="btnViewBookmarks" onclick="showBookmarkedSantri()" title="Lihat Santri Bookmark" class="text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/60 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 shadow-sm active:scale-95">
-              ⭐ Bookmark (<span id="bookmarkCountLabel">0</span>)
-            </button>
-
-            <span id="cacheBadge" class="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-full font-semibold border border-slate-200/60 hidden">
-              ⚡ Ter-cache
-            </span>
-          </div>
-          
-          <button onclick="forceRefreshData()" title="Sync Data" class="text-xs text-slate-500 hover:text-emerald-600 transition flex items-center gap-1 bg-slate-100/80 px-3 py-1.5 rounded-full font-medium border border-slate-200/40 active:scale-95">
-            🔄 Sync Data
-          </button>
-        </div>
-      </div>
-
-      <!-- TITLE HEADER -->
-      <div class="text-center mb-6 select-none">
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">Pencarian Data Santri</h1>
-        <p class="text-slate-400 mt-1 text-xs font-medium">Ketik nama santri/ID PPS atau kata kunci (contoh: <span class="italic text-emerald-600">“tahfidz asal pasuruan kelas 1 aliyah”</span>)</p>
-      </div>
-
-      <!-- SEARCH INPUT -->
-      <div class="relative flex items-center mb-4">
-        <input type="text" id="searchInput" placeholder="Cari Nama Santri, ID, atau 'asal Semarang kelas 1 aliyah'..." 
-               class="w-full pl-4 pr-24 py-3.5 bg-slate-100 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:bg-white text-sm transition shadow-inner disabled:opacity-60 selectable-text" 
-               onkeyup="handleKeyPress(event)" disabled>
-        <button onclick="lakukanPencarianFast(true)" id="searchBtn" disabled
-                class="absolute right-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-semibold text-xs transition shadow-md disabled:opacity-50 active:scale-95">
-          Cari
-        </button>
-      </div>
-
-      <!-- SMART QUERY BADGE INDICATOR -->
-      <div id="smartQueryBadge" class="hidden mb-4 p-2.5 bg-indigo-50 border border-indigo-200/60 rounded-xl text-xs text-indigo-800 flex items-center justify-between">
-        <span id="smartQueryText" class="font-medium">🔍 Smart Query Aktif</span>
-        <button onclick="resetSmartQuery()" class="text-[10px] font-bold text-indigo-600 hover:underline">Reset</button>
-      </div>
+  <div id="scrollableArea" class="pt-16 pb-28 px-3 sm:px-6">
+    <div class="max-w-xl mx-auto">
 
       <!-- LOADING INDICATOR -->
-      <div id="loading" class="text-center py-6 text-emerald-600 font-semibold flex items-center justify-center gap-2">
+      <div id="loading" class="text-center py-10 text-emerald-600 font-semibold flex items-center justify-center gap-2">
         <svg class="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -175,9 +134,43 @@
         <span id="loadingText" class="text-xs text-slate-500">Memuat database santri...</span>
       </div>
 
-      <!-- CONTAINER HASIL PENCARIAN -->
-      <div id="infoMessage" class="mt-4"></div>
-      <div id="resultContainer" class="mt-3"></div>
+      <!-- CONTAINER HASIL PENCARIAN (FOKUS KARTU) -->
+      <div id="infoMessage" class="mt-1"></div>
+      <div id="resultContainer" class="mt-2"></div>
+
+    </div>
+  </div>
+
+  <!-- FLOATING BOTTOM DOCK PENCARIAN (APPLE MAPS STYLE) -->
+  <div class="fixed bottom-4 inset-x-0 mx-auto max-w-lg w-[94%] z-40">
+    
+    <!-- SMART QUERY BADGE FLOATING -->
+    <div id="smartQueryBadge" class="hidden mb-2 p-2.5 bg-indigo-900/90 backdrop-blur-md text-white rounded-2xl text-xs shadow-lg flex items-center justify-between border border-indigo-700/50">
+      <span id="smartQueryText" class="font-medium truncate pr-2">🔍 Smart Query Aktif</span>
+      <button onclick="resetSmartQuery()" class="text-[10px] font-bold bg-indigo-700 hover:bg-indigo-600 px-2.5 py-1 rounded-lg shrink-0">Reset</button>
+    </div>
+
+    <!-- MAIN FLOATING DOCK CARD -->
+    <div class="bg-white/90 backdrop-blur-xl border border-slate-200/80 shadow-2xl rounded-3xl p-2 flex items-center gap-2 transition-all">
+      
+      <!-- MENU FEATURE TRIGGER BUTTON -->
+      <button onclick="openFeatureMenuModal()" class="p-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl transition active:scale-95 shrink-0 relative" title="Fitur & Menu">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+
+      <!-- INPUT PENCARIAN -->
+      <input type="text" id="searchInput" placeholder="Cari nama, ID, atau 'asal pasuruan kelas 1'..." 
+             class="w-full py-2.5 px-3 bg-transparent text-sm focus:outline-none placeholder-slate-400 text-slate-800 font-medium selectable-text" 
+             onkeyup="handleKeyPress(event)" disabled>
+
+      <!-- TOMBOL CARI -->
+      <button onclick="lakukanPencarianFast(true)" id="searchBtn" disabled
+              class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-2xl font-bold text-xs shadow-md transition shrink-0 active:scale-95 disabled:opacity-50">
+        Cari
+      </button>
+
     </div>
   </div>
 
@@ -475,7 +468,6 @@
       tahfidzMap: {}
     };
 
-    // HYBRID STORAGE SYSTEM DENGAN IN-MEMORY FALLBACK
     const memoryFallback = {};
 
     const HybridStore = {
@@ -512,7 +504,7 @@
       },
       set: function(key, val) {
         return new Promise((resolve) => {
-          memoryFallback[key] = val; // Simpan di RAM sementara jika storage penuh
+          memoryFallback[key] = val;
           try {
             if (key === 'SANTRI_BOOKMARKS') localStorage.setItem(key, JSON.stringify(val));
           } catch(e) {}
@@ -530,7 +522,6 @@
       }
     };
 
-    // FEATURE MENU MODAL
     function openFeatureMenuModal() {
       const modal = document.getElementById('featureMenuModal');
       const card = document.getElementById('featureMenuCard');
@@ -544,7 +535,6 @@
       document.getElementById('featureMenuModal').classList.add('hidden');
     }
 
-    // BOOKMARK SYSTEM
     let bookmarkedPpsSet = new Set();
 
     function loadBookmarks() {
@@ -579,7 +569,7 @@
         showIosToastSimple("⭐ BOOKMARK", "Dihapus dari daftar bookmark.");
       } else {
         bookmarkedPpsSet.add(cleanId);
-        showIosToastSimple("⭐ BOOKMARK", "Disimpan ke daftar bookmark! ⭐");
+        showIosToastSimple("⭐ BOOKMARK", "Disimpan ke daftar bookmark!");
       }
       saveBookmarks();
       renderCurrentCard();
@@ -610,14 +600,13 @@
       });
 
       if (searchResults.length === 0) {
-        container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-2xl">Data santri bookmark tidak ditemukan di database saat ini.</div>`;
+        container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-2xl bg-white">Data santri bookmark tidak ditemukan di database saat ini.</div>`;
         return;
       }
 
       renderCurrentCard();
     }
 
-    // KOMPARASI SANTRI SIDE-BY-SIDE
     let comparePpsSet = new Set();
 
     function toggleCompare(event, idPps) {
@@ -755,7 +744,6 @@
     }
 
     window.onload = function() {
-      initFabDrag();
       loadBookmarks();
 
       HybridStore.get('SANTRI_DB_CACHE').then(cachedData => {
@@ -815,15 +803,28 @@
 
     function showStatusBadge(text) {
       const badge = document.getElementById('cacheBadge');
-      const mobBadge = document.getElementById('cacheBadgeMobile');
       if (badge) {
         badge.innerText = text;
         badge.classList.remove('hidden');
       }
-      if (mobBadge) {
-        mobBadge.innerText = text;
-        mobBadge.classList.remove('hidden');
-      }
+    }
+
+    function renderEmptyState() {
+      const container = document.getElementById('resultContainer');
+      const infoMsg = document.getElementById('infoMessage');
+      if (infoMsg) infoMsg.innerHTML = '';
+      if (!container) return;
+
+      container.innerHTML = `
+        <div class="text-center py-16 px-4 border border-slate-200/70 rounded-3xl bg-white shadow-sm my-2 select-none">
+          <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl font-bold shadow-inner">
+            🔍
+          </div>
+          <h3 class="font-bold text-slate-800 text-sm mb-1">Siap Mencari Data Santri</h3>
+          <p class="text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">
+            Ketik kata kunci di kolom pencarian bagian bawah layar untuk mulai mencari santri.
+          </p>
+        </div>`;
     }
 
     function initDatabase(res, isFromCache) {
@@ -843,6 +844,7 @@
       populateStatsColumnSelector();
       updateBookmarkBadgeCount();
       updateCompareBadgeCount();
+      renderEmptyState();
     }
 
     let searchTimeout = null;
@@ -858,9 +860,6 @@
       }
     }
 
-    /* =========================================================================
-       ALGORITMA SMART QUERY DINAMIS & PENCOCOKAN PERSISI KOLOM
-       ========================================================================= */
     function parseNaturalLanguageQuery(queryStr) {
       let clean = queryStr.toLowerCase().trim();
       
@@ -908,7 +907,7 @@
     function resetSmartQuery() {
       document.getElementById('searchInput').value = '';
       document.getElementById('smartQueryBadge').classList.add('hidden');
-      lakukanPencarianFast(true);
+      renderEmptyState();
     }
 
     function lakukanPencarianFast(isForce) {
@@ -926,6 +925,7 @@
 
       if (!keyword) {
         smartBadge.classList.add('hidden');
+        renderEmptyState();
         return;
       }
       if (!isForce && keyword.length < 2) return;
@@ -943,7 +943,7 @@
           if (smartParsed.kelas) badgeInfo.push(`Kelas: ${smartParsed.kelas}`);
           if (smartParsed.nameKeyword) badgeInfo.push(`Nama/ID: ${smartParsed.nameKeyword}`);
 
-          smartText.innerHTML = `🤖 <strong>Smart Query Aktif:</strong> ${badgeInfo.join(' | ')}`;
+          smartText.innerHTML = `🤖 <strong>Smart Query:</strong> ${badgeInfo.join(' | ')}`;
           smartBadge.classList.remove('hidden');
 
           const locationHeaderIndexes = [];
@@ -1011,7 +1011,7 @@
         }
 
         if (searchResults.length === 0) {
-          container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-2xl">Data santri tidak ditemukan.</div>`;
+          container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-2xl bg-white">Data santri tidak ditemukan.</div>`;
           return;
         }
 
@@ -1168,7 +1168,7 @@
       const total = searchResults.length;
 
       infoMsg.innerHTML = `
-        <div class="flex justify-between items-center text-xs text-slate-500 mb-3 px-1 select-none">
+        <div class="flex justify-between items-center text-xs text-slate-500 mb-2 px-1 select-none">
           <span>Ditemukan <strong>${total}</strong> data</span>
           <span class="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold border border-emerald-200/80">
              Kartu ${currentCardIndex + 1} dari ${total}
@@ -1213,8 +1213,6 @@
       if (isMualim) statusSectionsHtml += buildExtraCardMinimal("Mu'allim", DB.mualimMap[idPps], 'bg-blue-50 border-blue-100 text-blue-900');
       if (isTahfidz) statusSectionsHtml += buildExtraCardMinimal("Tahfidz", DB.tahfidzMap[idPps], 'bg-emerald-50 border-emerald-100 text-emerald-900');
 
-      const navHint = total > 1 ? `<div class="text-[10px] text-slate-400 text-center mt-3 pt-2 border-t border-slate-100 flex items-center justify-center gap-1 select-none"><span>👈 Usap / ketuk tepi kartu untuk berpindah 👉</span></div>` : '';
-
       const bookmarked = isBookmarked(idPps);
       const bookmarkBtnClass = bookmarked ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200';
       const bookmarkIconText = bookmarked ? '★ Bookmark' : '☆ Bookmark';
@@ -1224,15 +1222,14 @@
       const compareIconText = compared ? '✓ Komparasi' : '⚖️ Komparasi';
 
       const card = `
-      <div class="card-perspective relative">
-        <div id="cardFlipWrapper" 
-             class="card-flip-container bg-white rounded-2xl border border-slate-200 shadow-md p-5 cursor-pointer relative"
+      <div class="relative">
+        <div id="cardSlideWrapper" 
+             class="card-slide-container bg-white rounded-3xl border border-slate-200/90 shadow-xl p-5 sm:p-6 relative"
              ontouchstart="handleCardTouchStart(event)" 
              ontouchmove="handleCardTouchMove(event)" 
-             ontouchend="handleCardTouchEnd(event)" 
-             onclick="handleCardClick(event)">
+             ontouchend="handleCardTouchEnd(event)">
           
-          <button id="btnCopyCard" onclick="salinDataSantriCard(event)" class="absolute top-4 right-4 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1 z-10" title="Salin ID PPS & Tanggal Lahir">
+          <button id="btnCopyCard" onclick="salinDataSantriCard(event)" class="absolute top-5 right-5 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1 z-10" title="Salin ID PPS & Tanggal Lahir">
             📋 Salin
           </button>
 
@@ -1263,6 +1260,7 @@
 
           ${statusSectionsHtml}
 
+          <!-- TOMBOL AKSI UTAMA -->
           <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
             <div class="flex items-center gap-2">
               <span class="text-[11px] text-slate-400 font-medium mr-1 select-none">Hubungi:</span>
@@ -1284,7 +1282,25 @@
             </div>
           </div>
 
-          ${navHint}
+          <!-- NAVIGASI KARTU FISIK (PREV / NEXT) -->
+          <div class="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-100 select-none">
+            <button onclick="prevCard(event)" 
+                    class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs flex items-center gap-1 transition disabled:opacity-30 disabled:pointer-events-none" 
+                    ${currentCardIndex === 0 ? 'disabled' : ''}>
+              ❮ Sebelumnya
+            </button>
+
+            <span class="text-[11px] font-bold text-slate-400">
+              ${currentCardIndex + 1} / ${total}
+            </span>
+
+            <button onclick="nextCard(event)" 
+                    class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs flex items-center gap-1 transition disabled:opacity-30 disabled:pointer-events-none" 
+                    ${currentCardIndex === total - 1 ? 'disabled' : ''}>
+              Selanjutnya ❯
+            </button>
+          </div>
+
         </div>
       </div>`;
       
@@ -1296,12 +1312,13 @@
     let cardStartY = 0;
     let cardDeltaX = 0;
 
+    /* LOGIK TRANSISI HORIZONTAL SMOOTH SLIDE */
     function changeCard(dir) {
       if (isCardAnimating) return;
       const newIndex = currentCardIndex + dir;
       if (newIndex < 0 || newIndex >= searchResults.length) return;
 
-      const wrapper = document.getElementById('cardFlipWrapper');
+      const wrapper = document.getElementById('cardSlideWrapper');
       if (!wrapper) {
         currentCardIndex = newIndex;
         renderCurrentCard();
@@ -1309,37 +1326,46 @@
       }
 
       isCardAnimating = true;
-      const outClass = dir > 0 ? 'flip-out-left' : 'flip-out-right';
-      const inClass = dir > 0 ? 'flip-in-right' : 'flip-in-left';
+
+      // Tentukan arah keluar dan masuk
+      const outClass = dir > 0 ? 'slide-out-left' : 'slide-out-right';
+      const inClass = dir > 0 ? 'slide-in-right' : 'slide-in-left';
 
       wrapper.classList.add(outClass);
 
       setTimeout(() => {
         currentCardIndex = newIndex;
         renderCurrentCard();
-        const newWrapper = document.getElementById('cardFlipWrapper');
+        const newWrapper = document.getElementById('cardSlideWrapper');
         if (newWrapper) {
           newWrapper.classList.add(inClass);
-          setTimeout(() => {
-            newWrapper.classList.remove(inClass);
-            isCardAnimating = false;
-          }, 250);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              newWrapper.classList.remove(inClass);
+              isCardAnimating = false;
+            });
+          });
         } else {
           isCardAnimating = false;
         }
-      }, 150);
+      }, 160);
     }
 
-    function nextCard() { changeCard(1); }
-    function prevCard() { changeCard(-1); }
+    function nextCard(e) { 
+      if (e) e.stopPropagation();
+      changeCard(1); 
+    }
+    
+    function prevCard(e) { 
+      if (e) e.stopPropagation();
+      changeCard(-1); 
+    }
 
     function handleCardTouchStart(e) {
       if (e.touches.length === 1) {
         cardStartX = e.touches[0].clientX;
         cardStartY = e.touches[0].clientY;
         cardDeltaX = 0;
-        const wrapper = document.getElementById('cardFlipWrapper');
-        if (wrapper) wrapper.style.transition = 'none';
       }
     }
 
@@ -1352,21 +1378,10 @@
 
       if (Math.abs(diffX) > Math.abs(diffY)) {
         cardDeltaX = diffX;
-        const wrapper = document.getElementById('cardFlipWrapper');
-        if (wrapper) {
-          const rotateY = Math.min(Math.max((cardDeltaX / wrapper.clientWidth) * 50, -50), 50);
-          wrapper.style.transform = `rotateY(${rotateY}deg)`;
-        }
       }
     }
 
     function handleCardTouchEnd(e) {
-      const wrapper = document.getElementById('cardFlipWrapper');
-      if (wrapper) {
-        wrapper.style.transition = '';
-        wrapper.style.transform = '';
-      }
-
       if (Math.abs(cardDeltaX) > 40) {
         if (cardDeltaX < 0) nextCard();
         else prevCard();
@@ -1374,14 +1389,6 @@
       cardStartX = 0;
       cardStartY = 0;
       cardDeltaX = 0;
-    }
-
-    function handleCardClick(e) {
-      if (e.target.closest('button, a, input, .group, .selectable-text')) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      if (clickX > rect.width / 2) nextCard();
-      else prevCard();
     }
 
     function buildExtraCardMinimal(title, dataObj, colorClass) {
@@ -1513,9 +1520,6 @@
       document.getElementById('photoModal').classList.add('hidden');
     }
 
-    /* =========================================================================
-       PETA GIS PERSEBARAN SANTRI (HIERARCHICAL ZOOM: PROVINSI -> KABUPATEN)
-       ========================================================================= */
     let leafletMapInstance = null;
     let leafletMarkerGroup = null;
     let geocodeMemoryCache = {};
@@ -1530,31 +1534,14 @@
         .replace(/\s+/g, ' ');
 
       const abbrevMap = {
-        'kalbar': 'kalimantan barat',
-        'kaltim': 'kalimantan timur',
-        'kalteng': 'kalimantan tengah',
-        'kalsel': 'kalimantan selatan',
-        'kaltara': 'kalimantan utara',
-        'kalut': 'kalimantan utara',
-        'sulsel': 'sulawesi selatan',
-        'sultra': 'sulawesi tenggara',
-        'sulteng': 'sulawesi tengah',
-        'sulut': 'sulawesi utara',
-        'sulbar': 'sulawesi barat',
-        'sumut': 'sumatera utara',
-        'sumbar': 'sumatera barat',
-        'sumsel': 'sumatera selatan',
-        'babel': 'bangka belitung',
-        'ntt': 'nusa tenggara timur',
-        'ntb': 'nusa tenggara barat',
-        'jabar': 'jawa barat',
-        'jateng': 'jawa tengah',
-        'jatim': 'jawa timur',
-        'diy': 'di yogyakarta',
-        'jogja': 'di yogyakarta',
-        'yogyakarta': 'di yogyakarta',
-        'dki': 'dki jakarta',
-        'jakarta': 'dki jakarta'
+        'kalbar': 'kalimantan barat', 'kaltim': 'kalimantan timur', 'kalteng': 'kalimantan tengah',
+        'kalsel': 'kalimantan selatan', 'kaltara': 'kalimantan utara', 'kalut': 'kalimantan utara',
+        'sulsel': 'sulawesi selatan', 'sultra': 'sulawesi tenggara', 'sulteng': 'sulawesi tengah',
+        'sulut': 'sulawesi utara', 'sulbar': 'sulawesi barat', 'sumut': 'sumatera utara',
+        'sumbar': 'sumatera barat', 'sumsel': 'sumatera selatan', 'babel': 'bangka belitung',
+        'ntt': 'nusa tenggara timur', 'ntb': 'nusa tenggara barat', 'jabar': 'jawa barat',
+        'jateng': 'jawa tengah', 'jatim': 'jawa timur', 'diy': 'di yogyakarta', 'jogja': 'di yogyakarta',
+        'yogyakarta': 'di yogyakarta', 'dki': 'dki jakarta', 'jakarta': 'dki jakarta'
       };
 
       return abbrevMap[clean] || clean;
@@ -1801,7 +1788,6 @@
         for (let normKab in provData.kabupatenMap) {
           const kabData = provData.kabupatenMap[normKab];
 
-          // 1. Cek Kamus Lokal Offline
           let coords = LOCAL_KAB_COORDS[normKab];
           if (!coords) {
             for (let key in LOCAL_KAB_COORDS) {
@@ -1812,7 +1798,6 @@
             }
           }
 
-          // 2. Cek Cache Browser
           if (!coords && geocodeMemoryCache[normKab]) {
             coords = geocodeMemoryCache[normKab];
           }
@@ -1867,7 +1852,6 @@
           if (data && data.length > 0) {
             const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
 
-            // Batasi cache maksimal 150 daerah untuk mencegah RAM/penyimpanan membengkak
             const cacheKeys = Object.keys(geocodeMemoryCache);
             if (cacheKeys.length >= 150) {
               delete geocodeMemoryCache[cacheKeys[0]];
@@ -1893,7 +1877,6 @@
       }, 1200);
     }
 
-    // DATABASE TABLE & FILTERING
     let unifiedTableHeaders = [];
     let unifiedTableData = [];
     let filteredTableData = [];
@@ -2274,50 +2257,6 @@
       }, 3500);
     }
 
-    let fabMoved = false;
-    function initFabDrag() {
-      const fab = document.getElementById('fabTable');
-      if (!fab) return;
-      let isDragging = false;
-      let startX, startY, initialX = 0, initialY = 0;
-
-      function onPointerDown(e) {
-        fabMoved = false;
-        isDragging = true;
-        startX = (e.touches ? e.touches[0].clientX : e.clientX) - initialX;
-        startY = (e.touches ? e.touches[0].clientY : e.clientY) - initialY;
-      }
-
-      function onPointerMove(e) {
-        if (!isDragging) return;
-        const currentX = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
-        const currentY = (e.touches ? e.touches[0].clientY : e.clientY) - startY;
-
-        if (Math.abs(currentX - initialX) > 5 || Math.abs(currentY - initialY) > 5) {
-          fabMoved = true;
-        }
-
-        initialX = currentX;
-        initialY = currentY;
-        fab.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
-      }
-
-      function onPointerUp() { isDragging = false; }
-
-      fab.addEventListener('touchstart', onPointerDown, {passive: true});
-      window.addEventListener('touchmove', onPointerMove, {passive: true});
-      window.addEventListener('touchend', onPointerUp);
-
-      fab.addEventListener('mousedown', onPointerDown);
-      window.addEventListener('mousemove', onPointerMove);
-      window.addEventListener('mouseup', onPointerUp);
-    }
-
-    function handleFabClick(e) {
-      if (!fabMoved) openTableModal();
-    }
-
-    // STATISTIK & VISUALISASI CHART
     let currentChart = null;
     let activeStatsTab = 'status';
     let activeStatusFilter = 'ALL';
