@@ -2,9 +2,13 @@
 <html lang="id" class="h-full overflow-hidden">
 <head>
   <meta charset="UTF-8">
+  
+  <!-- TAG ANTI-CACHE (Agar update di GitHub Pages langsung berubah di HP) -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
+  
+  <!-- VIEWPORT MOBILE iOS & ANDROID -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Pencarian Data Santri</title>
   
@@ -38,6 +42,12 @@
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
       touch-action: pan-x pan-y;
+    }
+
+    /* DYNAMIC ISLAND ANIMATION (iOS STYLE) */
+    .dynamic-island-transition {
+      transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform, opacity, width;
     }
 
     /* iOS POPUP & BOUNCE ANIMATION */
@@ -89,7 +99,26 @@
 </head>
 <body class="text-slate-800 relative bg-slate-100">
 
-  <!-- TOAST NOTIFIKASI ALA iOS -->
+  <!-- DYNAMIC ISLAND NOTIFICATION ALA IPHONE -->
+  <div id="dynamicIsland" 
+       class="dynamic-island-transition fixed top-3 left-1/2 -translate-x-1/2 z-[200] bg-slate-950/95 text-white rounded-full px-4 py-2.5 shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-2xl opacity-0 scale-90 -translate-y-12 pointer-events-none max-w-[92vw] w-auto">
+    
+    <!-- IKON CHECKMARK INTERAKTIF -->
+    <div class="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-lg shadow-emerald-500/30">
+      ✓
+    </div>
+
+    <!-- PESAN DYNAMIC ISLAND -->
+    <div class="flex flex-col min-w-0 pr-1">
+      <div class="flex items-center gap-1.5">
+        <span id="islandTitle" class="text-xs font-bold tracking-tight text-white truncate">Data Berhasil Disalin!</span>
+        <span class="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.2 rounded-full font-bold border border-emerald-500/30 shrink-0">Wali Santri</span>
+      </div>
+      <span id="islandSubtitle" class="text-[11px] text-slate-300 font-medium truncate leading-tight mt-0.5">ID PPS & TTL siap digunakan di aplikasi Wali Santri</span>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFIKASI STANDARD iOS -->
   <div id="iosToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[150] max-w-md w-[90%] bg-white/95 backdrop-blur-2xl border border-white/80 shadow-2xl rounded-2xl p-4 transition-all duration-300 -translate-y-24 opacity-0 pointer-events-none">
     <div class="flex justify-between items-center mb-1">
       <span id="toastPps" class="font-bold text-emerald-700 text-xs tracking-wider">ID PPS: -</span>
@@ -1130,6 +1159,28 @@
       return '';
     }
 
+    /* TRIGER ANIMASI DYNAMIC ISLAND NOTIFIKASI */
+    let dynamicIslandTimeout = null;
+
+    function triggerDynamicIsland(title, subtitle) {
+      const island = document.getElementById('dynamicIsland');
+      const titleEl = document.getElementById('islandTitle');
+      const subEl = document.getElementById('islandSubtitle');
+
+      if (titleEl) titleEl.innerText = title;
+      if (subEl) subEl.innerText = subtitle;
+
+      // Reset Animasi Mekar Ala Dynamic Island
+      island.classList.remove('opacity-0', 'scale-90', '-translate-y-12', 'pointer-events-none');
+      island.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+
+      clearTimeout(dynamicIslandTimeout);
+      dynamicIslandTimeout = setTimeout(() => {
+        island.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+        island.classList.add('opacity-0', 'scale-90', '-translate-y-12', 'pointer-events-none');
+      }, 3400);
+    }
+
     function salinDataSantriCard(event) {
       if (event) {
         event.stopPropagation();
@@ -1156,6 +1207,13 @@
             btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
           }, 1200);
         }
+
+        // TAMPILKAN ANIMASI DYNAMIC ISLAND
+        const detailMessage = dobCode
+          ? "ID PPS & TTL siap digunakan di aplikasi Wali Santri."
+          : "ID PPS siap digunakan di aplikasi Wali Santri.";
+        triggerDynamicIsland("Data Berhasil Disalin! 📋", detailMessage);
+
       }).catch(() => {
         alert('Gagal menyalin data santri.');
       });
@@ -1236,8 +1294,9 @@
             📋 Salin
           </button>
 
-          <div class="flex items-center gap-4 pb-4 border-b border-slate-100 pr-20">
-            <div class="relative group cursor-pointer flex-shrink-0" onclick="openPhotoModal()">
+          <!-- HEADER KARTU DENGAN STRUKTUR URUTAN BARU -->
+          <div class="flex items-start gap-3.5 pb-4 border-b border-slate-100 pr-16">
+            <div class="relative group cursor-pointer flex-shrink-0 mt-0.5" onclick="openPhotoModal()">
               ${safeFotoUrl ? `
                 <img src="${safeFotoUrl}" alt="Thumbnail Santri" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm hover:scale-105 transition-transform">
               ` : `
@@ -1251,9 +1310,14 @@
             </div>
 
             <div class="flex-grow min-w-0">
-              <span class="text-[10px] font-bold tracking-wider text-emerald-600 uppercase selectable-text">ID PPS: ${escapeHTML(idPps) || '-'}</span>
-              <h2 class="text-lg font-bold text-slate-800 truncate leading-snug selectable-text">${escapeHTML(nama)}</h2>
-              <div class="flex flex-wrap gap-1 mt-1">${statusBadges.join(' ')}</div>
+              <!-- 1. ID PPS -->
+              <span class="text-[10px] font-bold tracking-wider text-emerald-600 uppercase block selectable-text">ID PPS: ${escapeHTML(idPps) || '-'}</span>
+              
+              <!-- 2. STATUS BADGES (DIBAWAH ID PPS) -->
+              <div class="flex flex-wrap gap-1 my-1.5">${statusBadges.join(' ')}</div>
+              
+              <!-- 3. NAMA SANTRI (PALING BAWAH, TAMPIL UTUH TANPA TERPOTONG) -->
+              <h2 class="text-sm sm:text-base font-extrabold text-slate-800 leading-snug break-words selectable-text">${escapeHTML(nama)}</h2>
             </div>
           </div>
 
@@ -1285,22 +1349,28 @@
             </div>
           </div>
 
-          <!-- NAVIGASI KARTU FISIK (PREV / NEXT) -->
+          <!-- NAVIGASI KARTU RINGKAS (PETUNJUK SWIPE & TOMBOL IKON) -->
           <div class="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-100 select-none">
             <button onclick="prevCard(event)" 
-                    class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs flex items-center gap-1 transition disabled:opacity-30 disabled:pointer-events-none" 
+                    aria-label="Sebelumnya"
+                    title="Kartu Sebelumnya"
+                    class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-black text-sm flex items-center justify-center transition disabled:opacity-25 disabled:pointer-events-none shrink-0" 
                     ${currentCardIndex === 0 ? 'disabled' : ''}>
-              ❮ Sebelumnya
+              ❮
             </button>
 
-            <span class="text-[11px] font-bold text-slate-400">
-              ${currentCardIndex + 1} / ${total}
-            </span>
+            <div class="flex items-center gap-1 text-xs text-slate-400 font-medium">
+              <span class="text-[11px] font-bold text-slate-600 bg-slate-100/90 px-3 py-1 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-1">
+                👈 <span class="text-slate-400 font-normal">Usap</span> <strong>${currentCardIndex + 1}/${total}</strong> 👉
+              </span>
+            </div>
 
             <button onclick="nextCard(event)" 
-                    class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs flex items-center gap-1 transition disabled:opacity-30 disabled:pointer-events-none" 
+                    aria-label="Selanjutnya"
+                    title="Kartu Selanjutnya"
+                    class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-black text-sm flex items-center justify-center transition disabled:opacity-25 disabled:pointer-events-none shrink-0" 
                     ${currentCardIndex === total - 1 ? 'disabled' : ''}>
-              Selanjutnya ❯
+              ❯
             </button>
           </div>
 
