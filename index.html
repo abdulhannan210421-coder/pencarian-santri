@@ -103,12 +103,10 @@
   <div id="dynamicIsland" 
        class="dynamic-island-transition fixed top-3 left-1/2 -translate-x-1/2 z-[200] bg-slate-950/95 text-white rounded-full px-4 py-2.5 shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-2xl opacity-0 scale-90 -translate-y-12 pointer-events-none max-w-[92vw] w-auto">
     
-    <!-- IKON CHECKMARK INTERAKTIF -->
     <div class="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-lg shadow-emerald-500/30">
       ✓
     </div>
 
-    <!-- PESAN DYNAMIC ISLAND -->
     <div class="flex flex-col min-w-0 pr-1">
       <div class="flex items-center gap-1.5">
         <span id="islandTitle" class="text-xs font-bold tracking-tight text-white truncate">Data Berhasil Disalin!</span>
@@ -153,8 +151,8 @@
     </div>
   </header>
 
-  <!-- CONTAINER SCROLL UTAMA -->
-  <div id="scrollableArea" class="pt-16 pb-28 px-3 sm:px-6">
+  <!-- CONTAINER SCROLL UTAMA (REVISI: Padding bottom ditambah ke pb-44 agar kartu tidak terpotong dock) -->
+  <div id="scrollableArea" class="pt-16 pb-44 px-3 sm:px-6">
     <div class="max-w-xl mx-auto">
 
       <!-- LOADING INDICATOR -->
@@ -166,38 +164,35 @@
         <span id="loadingText" class="text-xs text-slate-500">Memuat database santri...</span>
       </div>
 
-      <!-- CONTAINER HASIL PENCARIAN (FOKUS KARTU) -->
+      <!-- CONTAINER HASIL PENCARIAN -->
       <div id="infoMessage" class="mt-1"></div>
       <div id="resultContainer" class="mt-2"></div>
 
     </div>
   </div>
 
-  <!-- FLOATING BOTTOM DOCK PENCARIAN (APPLE MAPS STYLE) -->
+  <!-- FLOATING BOTTOM DOCK PENCARIAN -->
   <div class="fixed bottom-4 inset-x-0 mx-auto max-w-lg w-[94%] z-40">
     
     <!-- SMART QUERY BADGE FLOATING -->
     <div id="smartQueryBadge" class="hidden mb-2 p-2.5 bg-indigo-900/90 backdrop-blur-md text-white rounded-2xl text-xs shadow-lg flex items-center justify-between border border-indigo-700/50">
-      <span id="smartQueryText" class="font-medium truncate pr-2">🔍 Smart Query Aktif</span>
+      <span id="smartQueryText" class="font-medium truncate pr-2">🔍 Smart Filter Aktif</span>
       <button onclick="resetSmartQuery()" class="text-[10px] font-bold bg-indigo-700 hover:bg-indigo-600 px-2.5 py-1 rounded-lg shrink-0">Reset</button>
     </div>
 
     <!-- MAIN FLOATING DOCK CARD -->
     <div class="bg-white/90 backdrop-blur-xl border border-slate-200/80 shadow-2xl rounded-3xl p-2 flex items-center gap-2 transition-all">
       
-      <!-- MENU FEATURE TRIGGER BUTTON -->
       <button onclick="openFeatureMenuModal()" class="p-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl transition active:scale-95 shrink-0 relative" title="Fitur & Menu">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 6h16M4 12h16M4 18h16"></path>
         </svg>
       </button>
 
-      <!-- INPUT PENCARIAN -->
-      <input type="text" id="searchInput" placeholder="Cari nama, ID, atau 'asal pasuruan kelas 1'..." 
+      <input type="text" id="searchInput" placeholder="Cari siapa?" 
              class="w-full py-2.5 px-3 bg-transparent text-sm focus:outline-none placeholder-slate-400 text-slate-800 font-medium selectable-text" 
              onkeyup="handleKeyPress(event)" disabled>
 
-      <!-- TOMBOL CARI -->
       <button onclick="lakukanPencarianFast(true)" id="searchBtn" disabled
               class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-2xl font-bold text-xs shadow-md transition shrink-0 active:scale-95 disabled:opacity-50">
         Cari
@@ -321,7 +316,7 @@
 
   <!-- MODAL STATISTIK & DASHBOARD -->
   <div id="statsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-3 sm:p-4 hidden">
-    <div id="statsModalCard" class="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden relative">
+    <div id="statsModalCard" class="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden relative">
       <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
         <div>
           <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -332,7 +327,7 @@
         <button onclick="closeStatsModal()" class="text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">✕</button>
       </div>
 
-      <div id="statsSummaryWidget" class="grid grid-cols-4 gap-2 px-4 pt-3 pb-2 bg-slate-50 border-b border-slate-100"></div>
+      <div id="statsSummaryWidget" class="grid grid-cols-5 gap-1.5 px-3 pt-3 pb-2 bg-slate-50 border-b border-slate-100"></div>
 
       <div class="px-4 py-2.5 bg-slate-100 border-b border-slate-200/60 flex flex-col sm:flex-row gap-2 justify-between items-center">
         <div class="w-full sm:w-auto grid grid-cols-3 gap-1 bg-slate-200/80 p-1 rounded-xl text-center text-xs font-semibold text-slate-600">
@@ -479,6 +474,37 @@
         .replace(/'/g, "&#039;");
     }
 
+    function copyTextToClipboard(text) {
+      return new Promise((resolve, reject) => {
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(resolve).catch(err => {
+            fallbackCopyText(text, resolve, reject);
+          });
+        } else {
+          fallbackCopyText(text, resolve, reject);
+        }
+      });
+    }
+
+    function fallbackCopyText(text, resolve, reject) {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (successful) resolve();
+        else reject(new Error('Gagal menyalin'));
+      } catch (err) {
+        reject(err);
+      }
+    }
+
     const scrollArea = document.getElementById('scrollableArea');
     let startY = 0;
 
@@ -492,12 +518,14 @@
       if (scrollArea.scrollTop <= 0 && distanceY > 0) e.preventDefault();
     }, { passive: false });
 
+    /* DATA DB DENGAN DUKUNGAN SHEET MUSTAMIK */
     let DB = {
       headersUtama: [],
       dataUtama: [],
       mutaallimMap: {},
       mualimMap: {},
-      tahfidzMap: {}
+      tahfidzMap: {},
+      mustamikMap: {}
     };
 
     const memoryFallback = {};
@@ -701,6 +729,7 @@
         if (DB.mutaallimMap[pps]) badges.push(`<span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-amber-100 text-amber-800">Muta'allim</span>`);
         if (DB.mualimMap[pps]) badges.push(`<span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-blue-100 text-blue-800">Mu'allim</span>`);
         if (DB.tahfidzMap[pps]) badges.push(`<span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-emerald-100 text-emerald-800">Tahfidz</span>`);
+        if (DB.mustamikMap && DB.mustamikMap[pps]) badges.push(`<span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-purple-100 text-purple-800">Mustamik</span>`);
         if (badges.length === 0) badges.push(`<span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-slate-200 text-slate-700">Regular</span>`);
 
         tableHtml += `<th class="p-3 font-bold min-w-[200px] bg-emerald-50 text-emerald-900 border-l border-slate-200">
@@ -721,6 +750,7 @@
         if (DB.mutaallimMap[pps]) listProg.push("Muta'allim");
         if (DB.mualimMap[pps]) listProg.push("Mu'allim");
         if (DB.tahfidzMap[pps]) listProg.push("Tahfidz");
+        if (DB.mustamikMap && DB.mustamikMap[pps]) listProg.push("Mustamik");
         if (listProg.length === 0) listProg.push("Regular");
 
         tableHtml += `<td class="p-2.5 font-bold text-emerald-900 border-l border-slate-200">${listProg.join(', ')}</td>`;
@@ -854,7 +884,7 @@
           </div>
           <h3 class="font-bold text-slate-800 text-sm mb-1">Siap Mencari Data Santri</h3>
           <p class="text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">
-            Ketik kata kunci di kolom pencarian bagian bawah layar untuk mulai mencari santri.
+            Ketik kata kunci fleksibel di bawah (contoh: <b>pasuruan 1 tsanawiyah tahfidz T-02 2002</b>).
           </p>
         </div>`;
     }
@@ -865,6 +895,7 @@
       DB.mutaallimMap = res.mutaallimMap || {};
       DB.mualimMap = res.mualimMap || {};
       DB.tahfidzMap = res.tahfidzMap || {};
+      DB.mustamikMap = res.mustamikMap || {};
 
       document.getElementById('loading').classList.add('hidden');
       document.getElementById('searchInput').disabled = false;
@@ -892,47 +923,33 @@
       }
     }
 
+    /* PENCARIAN CERDAS DENGAN EKSTRAKSI MULTI-FILTER ALA GOOGLE */
     function parseNaturalLanguageQuery(queryStr) {
-      let clean = queryStr.toLowerCase().trim();
+      let rawTokens = queryStr.toLowerCase().trim().split(/\s+/);
       
       let filterObj = {
-        status: null,
-        domisili: null,
-        kelas: null,
-        nameKeyword: '',
+        statusProgram: null,
+        extractedTokens: [],
         keywordRaw: queryStr
       };
 
-      if (/\btahfidz\b/i.test(clean)) {
-        filterObj.status = 'TAHFIDZ';
-        clean = clean.replace(/\btahfidz\b/gi, ' ');
-      } else if (/\bmuta['`]?allim\b/i.test(clean)) {
-        filterObj.status = 'MUTAALLIM';
-        clean = clean.replace(/\bmuta['`]?allim\b/gi, ' ');
-      } else if (/\bmu['`]?allim\b/i.test(clean)) {
-        filterObj.status = 'MUALIM';
-        clean = clean.replace(/\bmu['`]?allim\b/gi, ' ');
-      }
+      // 1. Ekstraksi Status Program
+      let cleanTokens = [];
+      rawTokens.forEach(tok => {
+        if (/^tahfidz$/i.test(tok)) {
+          filterObj.statusProgram = 'TAHFIDZ';
+        } else if (/^muta['`]?allim$/i.test(tok)) {
+          filterObj.statusProgram = 'MUTAALLIM';
+        } else if (/^mu['`]?allim$/i.test(tok)) {
+          filterObj.statusProgram = 'MUALIM';
+        } else if (/^mustami['`]?k$/i.test(tok)) {
+          filterObj.statusProgram = 'MUSTAMIK';
+        } else if (!/^(santri|data|cari|tolong|tampilkan|anggota|kelahiran|tahun|domisili|asal|dari|kelas|tingkat|kabupaten|kota)$/i.test(tok)) {
+          cleanTokens.push(tok);
+        }
+      });
 
-      const asalRegex = /(?:asal|dari|kabupaten|kota)\s+([\w\s]+?)(?=\s+\b(kelas|tingkat|tahfidz|mutaallim|mualim|ruang)\b|$)/i;
-      const asalMatch = clean.match(asalRegex);
-      if (asalMatch) {
-        filterObj.domisili = asalMatch[1].trim();
-        clean = clean.replace(asalMatch[0], ' ');
-      }
-
-      const kelasRegex = /(?:kelas|tingkat|marhalah|jilid)\s+([\w\s]+?)(?=\s+\b(asal|dari|kabupaten|kota|tahfidz|mutaallim|mualim|ruang)\b|$)/i;
-      const kelasMatch = clean.match(kelasRegex);
-      if (kelasMatch) {
-        filterObj.kelas = kelasMatch[1].trim();
-        clean = clean.replace(kelasMatch[0], ' ');
-      }
-
-      clean = clean.replace(/\b(santri|data|cari|tolong|tampilkan)\b/gi, ' ').replace(/\s+/g, ' ').trim();
-      if (clean.length > 0) {
-        filterObj.nameKeyword = clean;
-      }
-
+      filterObj.extractedTokens = cleanTokens;
       return filterObj;
     }
 
@@ -962,88 +979,50 @@
       }
       if (!isForce && keyword.length < 2) return;
 
-      container.innerHTML = `<div class="text-center text-emerald-600 py-6 text-xs font-medium animate-pulse">Memproses data...</div>`;
+      container.innerHTML = `<div class="text-center text-emerald-600 py-6 text-xs font-medium animate-pulse">Memproses filter data...</div>`;
 
       setTimeout(() => {
-        const smartParsed = parseNaturalLanguageQuery(keyword);
-        const hasStructuredFilter = smartParsed.status || smartParsed.domisili || smartParsed.kelas;
+        const parsed = parseNaturalLanguageQuery(keyword);
+        const tokens = parsed.extractedTokens;
+        
+        let badgeBadges = [];
+        if (parsed.statusProgram) badgeBadges.push(`Status: ${parsed.statusProgram}`);
+        if (tokens.length > 0) badgeBadges.push(`Filter: ${tokens.join(', ')}`);
 
-        if (hasStructuredFilter) {
-          let badgeInfo = [];
-          if (smartParsed.status) badgeInfo.push(`Status: ${smartParsed.status}`);
-          if (smartParsed.domisili) badgeInfo.push(`Daerah: ${smartParsed.domisili}`);
-          if (smartParsed.kelas) badgeInfo.push(`Kelas: ${smartParsed.kelas}`);
-          if (smartParsed.nameKeyword) badgeInfo.push(`Nama/ID: ${smartParsed.nameKeyword}`);
-
-          smartText.innerHTML = `🤖 <strong>Smart Query:</strong> ${badgeInfo.join(' | ')}`;
+        if (badgeBadges.length > 0) {
+          smartText.innerHTML = `🤖 <strong>Smart Filter:</strong> ${badgeBadges.join(' | ')}`;
           smartBadge.classList.remove('hidden');
-
-          const locationHeaderIndexes = [];
-          const classHeaderIndexes = [];
-
-          DB.headersUtama.forEach((h, idx) => {
-            const headerUpper = h.toUpperCase().trim();
-            if (headerUpper.includes('KABUPATEN') || headerUpper.includes('KOTA') || headerUpper.includes('PROVINSI') || headerUpper.includes('DOMISILI')) {
-              locationHeaderIndexes.push(idx);
-            }
-            if (headerUpper.includes('KELAS') || headerUpper.includes('TINGKAT') || headerUpper.includes('RUANG') || headerUpper.includes('MARHALAH') || headerUpper.includes('JILID')) {
-              classHeaderIndexes.push(idx);
-            }
-          });
-
-          searchResults = DB.dataUtama.filter(row => {
-            const idPps = row[0] ? String(row[0]).trim() : '';
-            const nama = row[1] ? String(row[1]).trim() : '';
-
-            let passStatus = true;
-            if (smartParsed.status === 'TAHFIDZ') passStatus = DB.tahfidzMap.hasOwnProperty(idPps);
-            if (smartParsed.status === 'MUTAALLIM') passStatus = DB.mutaallimMap.hasOwnProperty(idPps);
-            if (smartParsed.status === 'MUALIM') passStatus = DB.mualimMap.hasOwnProperty(idPps);
-
-            let passDomisili = true;
-            if (smartParsed.domisili) {
-              const domisiliTokens = smartParsed.domisili.toLowerCase().split(/\s+/);
-              const combinedLocationText = locationHeaderIndexes.map(idx => String(row[idx] || '').toLowerCase()).join(' ');
-
-              passDomisili = domisiliTokens.every(tok => combinedLocationText.includes(tok));
-            }
-
-            let passKelas = true;
-            if (smartParsed.kelas) {
-              const classTokens = smartParsed.kelas.toLowerCase().split(/\s+/);
-              const combinedClassText = classHeaderIndexes.map(idx => String(row[idx] || '').toLowerCase()).join(' ');
-
-              passKelas = classTokens.every(token => {
-                if (/^\d+$/.test(token)) {
-                  const digitRegex = new RegExp(`\\b${token}\\b`, 'i');
-                  return digitRegex.test(combinedClassText);
-                } else {
-                  return combinedClassText.includes(token);
-                }
-              });
-            }
-
-            let passName = true;
-            if (smartParsed.nameKeyword) {
-              const kw = smartParsed.nameKeyword.toLowerCase();
-              passName = idPps.toLowerCase().includes(kw) || nama.toLowerCase().includes(kw);
-            }
-
-            return passStatus && passDomisili && passKelas && passName;
-          });
         } else {
           smartBadge.classList.add('hidden');
-          const kw = keyword.toLowerCase();
-          searchResults = DB.dataUtama.filter(row => {
-            const idPps = row[0] ? String(row[0]).toLowerCase().trim() : '';
-            const nama = row[1] ? String(row[1]).toLowerCase().trim() : '';
-            const rowFullText = row.map(cell => String(cell || '').toLowerCase()).join(' ');
-            return idPps.includes(kw) || nama.includes(kw) || rowFullText.includes(kw);
-          });
         }
 
+        searchResults = DB.dataUtama.filter(row => {
+          const idPps = row[0] ? String(row[0]).trim() : '';
+
+          // Filter 1: Status Program
+          if (parsed.statusProgram) {
+            if (parsed.statusProgram === 'TAHFIDZ' && !DB.tahfidzMap.hasOwnProperty(idPps)) return false;
+            if (parsed.statusProgram === 'MUTAALLIM' && !DB.mutaallimMap.hasOwnProperty(idPps)) return false;
+            if (parsed.statusProgram === 'MUALIM' && !DB.mualimMap.hasOwnProperty(idPps)) return false;
+            if (parsed.statusProgram === 'MUSTAMIK' && (!DB.mustamikMap || !DB.mustamikMap.hasOwnProperty(idPps))) return false;
+          }
+
+          if (tokens.length === 0) return true;
+
+          // Gabungkan seluruh data santri (termasuk sheet mutaallim, mualim, tahfidz, mustamik) untuk dicocokkan dengan token
+          let fullRowText = row.map(cell => String(cell || '').toLowerCase()).join(' ');
+
+          if (DB.mutaallimMap[idPps]) fullRowText += ' ' + Object.values(DB.mutaallimMap[idPps]).join(' ').toLowerCase();
+          if (DB.mualimMap[idPps]) fullRowText += ' ' + Object.values(DB.mualimMap[idPps]).join(' ').toLowerCase();
+          if (DB.tahfidzMap[idPps]) fullRowText += ' ' + Object.values(DB.tahfidzMap[idPps]).join(' ').toLowerCase();
+          if (DB.mustamikMap && DB.mustamikMap[idPps]) fullRowText += ' ' + Object.values(DB.mustamikMap[idPps]).join(' ').toLowerCase();
+
+          // Kriteria Google-Like Multi-Token: Setiap token HARUS ada di dalam salah satu kolom data santri
+          return tokens.every(tok => fullRowText.includes(tok));
+        });
+
         if (searchResults.length === 0) {
-          container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-2xl bg-white">Data santri tidak ditemukan.</div>`;
+          container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs border border-dashed border-slate-200 rounded-2xl bg-white">Data santri dengan kriteria filter tersebut tidak ditemukan.</div>`;
           return;
         }
 
@@ -1159,7 +1138,6 @@
       return '';
     }
 
-    /* TRIGER ANIMASI DYNAMIC ISLAND NOTIFIKASI */
     let dynamicIslandTimeout = null;
 
     function triggerDynamicIsland(title, subtitle) {
@@ -1170,7 +1148,6 @@
       if (titleEl) titleEl.innerText = title;
       if (subEl) subEl.innerText = subtitle;
 
-      // Reset Animasi Mekar Ala Dynamic Island
       island.classList.remove('opacity-0', 'scale-90', '-translate-y-12', 'pointer-events-none');
       island.classList.add('opacity-100', 'scale-100', 'translate-y-0');
 
@@ -1194,7 +1171,7 @@
       const dobCode = getFormattedBirthDate(row, DB.headersUtama);
       const textToCopy = dobCode ? `${idPps} ${dobCode}` : `${idPps}`;
 
-      navigator.clipboard.writeText(textToCopy).then(() => {
+      copyTextToClipboard(textToCopy).then(() => {
         const btn = event ? event.currentTarget : document.getElementById('btnCopyCard');
         if (btn) {
           const oldText = btn.innerHTML;
@@ -1208,7 +1185,6 @@
           }, 1200);
         }
 
-        // TAMPILKAN ANIMASI DYNAMIC ISLAND
         const detailMessage = dobCode
           ? "ID PPS & TTL siap digunakan di aplikasi Wali Santri."
           : "ID PPS siap digunakan di aplikasi Wali Santri.";
@@ -1230,7 +1206,7 @@
 
       infoMsg.innerHTML = `
         <div class="flex justify-between items-center text-xs text-slate-500 mb-2 px-1 select-none">
-          <span>Ditemukan <strong>${total}</strong> data</span>
+          <span>Ditemukan <strong>${total}</strong> data santri</span>
           <span class="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold border border-emerald-200/80">
              Kartu ${currentCardIndex + 1} dari ${total}
           </span>
@@ -1249,23 +1225,31 @@
       const isMutaallim = DB.mutaallimMap.hasOwnProperty(idPps);
       const isMualim = DB.mualimMap.hasOwnProperty(idPps);
       const isTahfidz = DB.tahfidzMap.hasOwnProperty(idPps);
+      const isMustamik = DB.mustamikMap && DB.mustamikMap.hasOwnProperty(idPps);
 
       let statusBadges = [];
       if (isMutaallim) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-100/80 text-amber-800 border border-amber-200">Muta'allim</span>`);
       if (isMualim) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-100/80 text-blue-800 border border-blue-200">Mu'allim</span>`);
       if (isTahfidz) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100/80 text-emerald-800 border border-emerald-200">Tahfidz</span>`);
+      if (isMustamik) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-100/80 text-purple-800 border border-purple-200">Mustamik</span>`);
       if (statusBadges.length === 0) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-600 border border-slate-200">Santri Regular</span>`);
 
+      // REVISI: Sembunyikan baris jika bernilai kosong / "-" & tingkatkan kontras teks
       let detailUtamaHtml = '';
       DB.headersUtama.forEach((header, idx) => {
         let namaHeader = header.toUpperCase();
         if (namaHeader === "FOTO" || namaHeader === "KONTAK WALI" || namaHeader === "WA" || idx === 0 || idx === 1) return;
 
-        let val = (row[idx] !== "" && row[idx] !== null && row[idx] !== undefined) ? escapeHTML(row[idx]) : "-";
+        let rawVal = row[idx];
+        if (rawVal === undefined || rawVal === null) return;
+        let strVal = String(rawVal).trim();
+        if (strVal === "" || strVal === "-") return; // SKIP BARIS KOSONG ATAU "-"
+
+        let val = escapeHTML(strVal);
         detailUtamaHtml += `
           <div class="py-1.5 border-b border-slate-100 flex justify-between items-center text-xs">
             <span class="text-slate-400 font-medium">${escapeHTML(header)}</span>
-            <span class="text-slate-700 font-semibold text-right selectable-text">${val}</span>
+            <span class="text-slate-800 font-semibold text-right selectable-text">${val}</span>
           </div>`;
       });
 
@@ -1273,6 +1257,7 @@
       if (isMutaallim) statusSectionsHtml += buildExtraCardMinimal("Muta'allim", DB.mutaallimMap[idPps], 'bg-amber-50 border-amber-100 text-amber-900');
       if (isMualim) statusSectionsHtml += buildExtraCardMinimal("Mu'allim", DB.mualimMap[idPps], 'bg-blue-50 border-blue-100 text-blue-900');
       if (isTahfidz) statusSectionsHtml += buildExtraCardMinimal("Tahfidz", DB.tahfidzMap[idPps], 'bg-emerald-50 border-emerald-100 text-emerald-900');
+      if (isMustamik) statusSectionsHtml += buildExtraCardMinimal("Mustamik", DB.mustamikMap[idPps], 'bg-purple-50 border-purple-100 text-purple-900');
 
       const bookmarked = isBookmarked(idPps);
       const bookmarkBtnClass = bookmarked ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200';
@@ -1294,8 +1279,8 @@
             📋 Salin
           </button>
 
-          <!-- HEADER KARTU DENGAN STRUKTUR URUTAN BARU -->
-          <div class="flex items-start gap-3.5 pb-4 border-b border-slate-100 pr-16">
+          <!-- HEADER KARTU SANTRI (REVISI: pr-20 agar nama panjang tak menabrak tombol Salin) -->
+          <div class="flex items-start gap-3.5 pb-4 border-b border-slate-100 pr-20">
             <div class="relative group cursor-pointer flex-shrink-0 mt-0.5" onclick="openPhotoModal()">
               ${safeFotoUrl ? `
                 <img src="${safeFotoUrl}" alt="Thumbnail Santri" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm hover:scale-105 transition-transform">
@@ -1305,18 +1290,13 @@
                 </div>
               `}
               <div class="absolute inset-0 bg-slate-900/30 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
-                 🔎 Zoom
+                  🔎 Zoom
               </div>
             </div>
 
             <div class="flex-grow min-w-0">
-              <!-- 1. ID PPS -->
               <span class="text-[10px] font-bold tracking-wider text-emerald-600 uppercase block selectable-text">ID PPS: ${escapeHTML(idPps) || '-'}</span>
-              
-              <!-- 2. STATUS BADGES (DIBAWAH ID PPS) -->
               <div class="flex flex-wrap gap-1 my-1.5">${statusBadges.join(' ')}</div>
-              
-              <!-- 3. NAMA SANTRI (PALING BAWAH, TAMPIL UTUH TANPA TERPOTONG) -->
               <h2 class="text-sm sm:text-base font-extrabold text-slate-800 leading-snug break-words selectable-text">${escapeHTML(nama)}</h2>
             </div>
           </div>
@@ -1349,7 +1329,7 @@
             </div>
           </div>
 
-          <!-- NAVIGASI KARTU RINGKAS (PETUNJUK SWIPE & TOMBOL IKON) -->
+          <!-- NAVIGASI KARTU -->
           <div class="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-100 select-none">
             <button onclick="prevCard(event)" 
                     aria-label="Sebelumnya"
@@ -1385,7 +1365,6 @@
     let cardStartY = 0;
     let cardDeltaX = 0;
 
-    /* LOGIK TRANSISI HORIZONTAL SMOOTH SLIDE */
     function changeCard(dir) {
       if (isCardAnimating) return;
       const newIndex = currentCardIndex + dir;
@@ -1400,7 +1379,6 @@
 
       isCardAnimating = true;
 
-      // Tentukan arah keluar dan masuk
       const outClass = dir > 0 ? 'slide-out-left' : 'slide-out-right';
       const inClass = dir > 0 ? 'slide-in-right' : 'slide-in-left';
 
@@ -1464,15 +1442,24 @@
       cardDeltaX = 0;
     }
 
+    // REVISI: Sembunyikan item bernilai kosong/'-' pada rincian status
     function buildExtraCardMinimal(title, dataObj, colorClass) {
+      if (!dataObj) return '';
       let items = '';
       for (let key in dataObj) {
+        let raw = dataObj[key];
+        if (raw === undefined || raw === null) continue;
+        let str = String(raw).trim();
+        if (str === "" || str === "-") continue; // SKIP JIKA KOSONG ATAU "-"
+
         items += `
           <div class="py-1 flex justify-between text-[11px]">
-            <span class="opacity-70">${escapeHTML(key)}:</span>
-            <span class="font-semibold selectable-text">${escapeHTML(dataObj[key])}</span>
+            <span class="opacity-70 font-medium">${escapeHTML(key)}:</span>
+            <span class="font-semibold text-right selectable-text">${escapeHTML(str)}</span>
           </div>`;
       }
+
+      if (!items) return ''; // Jangan tampilkan kotak rincian jika seluruh datanya kosong
 
       return `
         <div class="mt-3 p-3 rounded-xl border ${colorClass}">
@@ -1480,7 +1467,7 @@
             <span class="w-1.5 h-1.5 rounded-full bg-current"></span>Rincian ${title}
           </h4>
           <div class="divide-y divide-black/5">
-            ${items || '<span class="text-[10px] opacity-60">Tidak ada rincian.</span>'}
+            ${items}
           </div>
         </div>`;
     }
@@ -1726,7 +1713,7 @@
     function filterByCityFromMap(cityName) {
       closeMapModal();
       const inputEl = document.getElementById('searchInput');
-      inputEl.value = "asal " + cityName;
+      inputEl.value = cityName;
       lakukanPencarianFast(true);
     }
 
@@ -1995,6 +1982,7 @@
       }, 350);
     }
 
+    /* PREPARE UNIFIED TABEL DATABASE DENGAN TAMBAHAN MAP MUSTAMIK */
     function prepareUnifiedTableData() {
       if (!DB.dataUtama || DB.dataUtama.length === 0) return;
 
@@ -2004,7 +1992,7 @@
       });
 
       let extraHeadersSet = new Set();
-      let maps = [DB.mutaallimMap, DB.mualimMap, DB.tahfidzMap];
+      let maps = [DB.mutaallimMap, DB.mualimMap, DB.tahfidzMap, DB.mustamikMap];
       
       maps.forEach(mapObj => {
         if (!mapObj) return;
@@ -2039,6 +2027,8 @@
             foundVal = DB.mualimMap[idPps][header];
           } else if (DB.tahfidzMap && DB.tahfidzMap[idPps] && DB.tahfidzMap[idPps][header] !== undefined) {
             foundVal = DB.tahfidzMap[idPps][header];
+          } else if (DB.mustamikMap && DB.mustamikMap[idPps] && DB.mustamikMap[idPps][header] !== undefined) {
+            foundVal = DB.mustamikMap[idPps][header];
           }
 
           item[header] = (foundVal !== undefined && foundVal !== null && String(foundVal).trim() !== '') ? String(foundVal).trim() : '-';
@@ -2364,6 +2354,7 @@
       switchStatsTab(activeStatsTab || 'domisili');
     }
 
+    /* RENDER DASHBOARD WIDGET DENGAN 5 ITEM TERMASUK MUSTAMIK */
     function renderSummaryWidgets() {
       const widgetContainer = document.getElementById('statsSummaryWidget');
       const totalSantri = unifiedTableData.length;
@@ -2371,27 +2362,32 @@
       let mutaallimCount = Object.keys(DB.mutaallimMap || {}).length;
       let mualimCount = Object.keys(DB.mualimMap || {}).length;
       let tahfidzCount = Object.keys(DB.tahfidzMap || {}).length;
+      let mustamikCount = Object.keys(DB.mustamikMap || {}).length;
 
       const getStyle = (st) => activeStatusFilter === st 
         ? 'ring-2 ring-emerald-500 scale-95 shadow-md opacity-100' 
         : 'hover:scale-105 opacity-80 hover:opacity-100';
 
       widgetContainer.innerHTML = `
-        <div onclick="filterByStatusCard('ALL')" class="bg-white rounded-2xl p-2 border border-slate-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('ALL')}">
-          <span class="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Total</span>
-          <span class="text-sm font-extrabold text-slate-800">${totalSantri.toLocaleString('id-ID')}</span>
+        <div onclick="filterByStatusCard('ALL')" class="bg-white rounded-2xl p-1.5 sm:p-2 border border-slate-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('ALL')}">
+          <span class="text-[8px] sm:text-[9px] font-bold text-slate-400 block uppercase tracking-wider truncate">Total</span>
+          <span class="text-xs sm:text-sm font-extrabold text-slate-800">${totalSantri.toLocaleString('id-ID')}</span>
         </div>
-        <div onclick="filterByStatusCard('MUTAALLIM')" class="bg-amber-50 rounded-2xl p-2 border border-amber-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('MUTAALLIM')}">
-          <span class="text-[9px] font-bold text-amber-700 block uppercase tracking-wider">Muta'allim</span>
-          <span class="text-sm font-extrabold text-amber-900">${mutaallimCount}</span>
+        <div onclick="filterByStatusCard('MUTAALLIM')" class="bg-amber-50 rounded-2xl p-1.5 sm:p-2 border border-amber-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('MUTAALLIM')}">
+          <span class="text-[8px] sm:text-[9px] font-bold text-amber-700 block uppercase tracking-wider truncate">Muta'allim</span>
+          <span class="text-xs sm:text-sm font-extrabold text-amber-900">${mutaallimCount}</span>
         </div>
-        <div onclick="filterByStatusCard('MUALIM')" class="bg-blue-50 rounded-2xl p-2 border border-blue-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('MUALIM')}">
-          <span class="text-[9px] font-bold text-blue-700 block uppercase tracking-wider">Mu'allim</span>
-          <span class="text-sm font-extrabold text-blue-900">${mualimCount}</span>
+        <div onclick="filterByStatusCard('MUALIM')" class="bg-blue-50 rounded-2xl p-1.5 sm:p-2 border border-blue-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('MUALIM')}">
+          <span class="text-[8px] sm:text-[9px] font-bold text-blue-700 block uppercase tracking-wider truncate">Mu'allim</span>
+          <span class="text-xs sm:text-sm font-extrabold text-blue-900">${mualimCount}</span>
         </div>
-        <div onclick="filterByStatusCard('TAHFIDZ')" class="bg-emerald-50 rounded-2xl p-2 border border-emerald-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('TAHFIDZ')}">
-          <span class="text-[9px] font-bold text-emerald-700 block uppercase tracking-wider">Tahfidz</span>
-          <span class="text-sm font-extrabold text-emerald-900">${tahfidzCount}</span>
+        <div onclick="filterByStatusCard('TAHFIDZ')" class="bg-emerald-50 rounded-2xl p-1.5 sm:p-2 border border-emerald-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('TAHFIDZ')}">
+          <span class="text-[8px] sm:text-[9px] font-bold text-emerald-700 block uppercase tracking-wider truncate">Tahfidz</span>
+          <span class="text-xs sm:text-sm font-extrabold text-emerald-900">${tahfidzCount}</span>
+        </div>
+        <div onclick="filterByStatusCard('MUSTAMIK')" class="bg-purple-50 rounded-2xl p-1.5 sm:p-2 border border-purple-200 shadow-sm text-center cursor-pointer transition transform ${getStyle('MUSTAMIK')}">
+          <span class="text-[8px] sm:text-[9px] font-bold text-purple-700 block uppercase tracking-wider truncate">Mustamik</span>
+          <span class="text-xs sm:text-sm font-extrabold text-purple-900">${mustamikCount}</span>
         </div>
       `;
     }
@@ -2464,6 +2460,7 @@
       return document.getElementById('statsChartCanvas').getContext('2d');
     }
 
+    /* GRAFIK STATISTIK STATUS DENGAN DUKUNGAN MUSTAMIK */
     function renderStatsChart(tabName) {
       const ctx = getFreshChartContext(260);
       const footerEl = document.getElementById('statsChartFooter');
@@ -2473,11 +2470,13 @@
         let mutaallimCount = Object.keys(DB.mutaallimMap || {}).length;
         let mualimCount = Object.keys(DB.mualimMap || {}).length;
         let tahfidzCount = Object.keys(DB.tahfidzMap || {}).length;
+        let mustamikCount = Object.keys(DB.mustamikMap || {}).length;
 
         let statusSet = new Set([
           ...Object.keys(DB.mutaallimMap || {}),
           ...Object.keys(DB.mualimMap || {}),
-          ...Object.keys(DB.tahfidzMap || {})
+          ...Object.keys(DB.tahfidzMap || {}),
+          ...Object.keys(DB.mustamikMap || {})
         ]);
 
         let regularCount = totalSantri - statusSet.size;
@@ -2486,10 +2485,10 @@
         currentChart = new Chart(ctx, {
           type: 'doughnut',
           data: {
-            labels: ["Muta'allim", "Mu'allim", "Tahfidz", "Regular"],
+            labels: ["Muta'allim", "Mu'allim", "Tahfidz", "Mustamik", "Regular"],
             datasets: [{
-              data: [mutaallimCount, mualimCount, tahfidzCount, regularCount],
-              backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#94a3b8'],
+              data: [mutaallimCount, mualimCount, tahfidzCount, mustamikCount, regularCount],
+              backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#a855f7', '#94a3b8'],
               borderWidth: 3,
               borderColor: '#ffffff',
               hoverOffset: 6
@@ -2528,6 +2527,7 @@
         if (activeStatusFilter === 'MUTAALLIM') return DB.mutaallimMap.hasOwnProperty(idPps);
         if (activeStatusFilter === 'MUALIM') return DB.mualimMap.hasOwnProperty(idPps);
         if (activeStatusFilter === 'TAHFIDZ') return DB.tahfidzMap.hasOwnProperty(idPps);
+        if (activeStatusFilter === 'MUSTAMIK') return DB.mustamikMap && DB.mustamikMap.hasOwnProperty(idPps);
         return true;
       });
 
@@ -2583,7 +2583,7 @@
         }
       });
 
-      footerEl.innerHTML = `${titleCaption} (Total ${labels.length} Kategori Terdeteksi)`;
+      footerEl.innerHTML = `${titleCaption} (Total ${labels.length} Kategori Terdetectsi)`;
     }
   </script>
 </body>
