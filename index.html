@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   
-  <!-- TAG ANTI-CACHE (Agar update di GitHub Pages langsung berubah di HP) -->
+  <!-- TAG ANTI-CACHE -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -12,7 +12,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Pencarian Data Santri</title>
   
-  <!-- Tailwind CSS & Chart.js CDN -->
+  <!-- FONT LOGO SIDOGIRI & TAILWIND CSS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
@@ -20,7 +24,7 @@
   <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd-min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
   
-  <!-- Leaflet.js (Peta GIS Interaktif) CDN -->
+  <!-- Leaflet.js CDN -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   
@@ -32,7 +36,7 @@
       overflow: hidden;
       overscroll-behavior: none;
       touch-action: none;
-      background-color: #f8fafc;
+      background-color: #f1f5f9;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
@@ -44,13 +48,23 @@
       touch-action: pan-x pan-y;
     }
 
+    /* LOGO SIDOGIRI CUSTOM STYLE */
+    .sidogiri-logo {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      color: #2d2b2c;
+      text-transform: lowercase;
+      line-height: 1;
+    }
+
     /* DYNAMIC ISLAND ANIMATION (iOS STYLE) */
     .dynamic-island-transition {
       transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
       will-change: transform, opacity, width;
     }
 
-    /* iOS POPUP & BOUNCE ANIMATION */
+    /* iOS POPUP ANIMATION */
     @keyframes iosPop {
       0% { opacity: 0; transform: scale(0.92) translateY(12px); }
       100% { opacity: 1; transform: scale(1) translateY(0); }
@@ -59,54 +73,38 @@
       animation: iosPop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    /* HORIZONTAL SMOOTH SLIDE CARD ANIMATION (iOS / STORY STYLE) */
+    /* CARD SLIDE ANIMATION */
     .card-slide-container {
       transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
       will-change: transform, opacity;
     }
-    .slide-out-left {
-      opacity: 0;
-      transform: translateX(-48px) scale(0.96);
-    }
-    .slide-out-right {
-      opacity: 0;
-      transform: translateX(48px) scale(0.96);
-    }
-    .slide-in-right {
-      opacity: 0;
-      transform: translateX(48px) scale(0.96);
-    }
-    .slide-in-left {
-      opacity: 0;
-      transform: translateX(-48px) scale(0.96);
-    }
+    .slide-out-left { opacity: 0; transform: translateX(-48px) scale(0.96); }
+    .slide-out-right { opacity: 0; transform: translateX(48px) scale(0.96); }
+    .slide-in-right { opacity: 0; transform: translateX(48px) scale(0.96); }
+    .slide-in-left { opacity: 0; transform: translateX(-48px) scale(0.96); }
 
     /* CUSTOM SCROLLBAR iOS STYLE */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
     .selectable-text {
       user-select: text !important;
       -webkit-user-select: text !important;
     }
 
-    /* LEAFLET Z-INDEX FIX */
     .leaflet-pane { z-index: 10 !important; }
     .leaflet-bottom, .leaflet-top { z-index: 20 !important; }
   </style>
 </head>
 <body class="text-slate-800 relative bg-slate-100">
 
-  <!-- DYNAMIC ISLAND NOTIFICATION ALA IPHONE -->
+  <!-- DYNAMIC ISLAND NOTIFICATION -->
   <div id="dynamicIsland" 
        class="dynamic-island-transition fixed top-3 left-1/2 -translate-x-1/2 z-[200] bg-slate-950/95 text-white rounded-full px-4 py-2.5 shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-2xl opacity-0 scale-90 -translate-y-12 pointer-events-none max-w-[92vw] w-auto">
-    
     <div class="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-lg shadow-emerald-500/30">
       ✓
     </div>
-
     <div class="flex flex-col min-w-0 pr-1">
       <div class="flex items-center gap-1.5">
         <span id="islandTitle" class="text-xs font-bold tracking-tight text-white truncate">Data Berhasil Disalin!</span>
@@ -126,14 +124,13 @@
     <div id="toastDetail" class="text-slate-600 bg-slate-100/90 p-2.5 rounded-xl border border-slate-200/50 font-medium text-xs selectable-text"></div>
   </div>
 
-  <!-- TOP COMPACT APP TITLE BAR -->
+  <!-- TOP APP TITLE BAR -->
   <header class="w-full bg-white/80 backdrop-blur-md border-b border-slate-200/60 px-4 py-2.5 fixed top-0 inset-x-0 z-20 flex justify-between items-center shadow-sm">
     <div class="flex items-center gap-2">
       <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
       <span class="font-extrabold text-sm text-slate-800 tracking-tight">Pencarian Santri</span>
     </div>
 
-    <!-- QUICK DESKTOP BUTTONS -->
     <div class="hidden sm:flex items-center gap-1.5">
       <button onclick="openStatsModal()" title="Statistik" class="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition shadow-sm active:scale-95">📊 Statistik</button>
       <button onclick="openMapModal()" title="Peta GIS" class="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full transition shadow-sm active:scale-95">🗺️ Peta</button>
@@ -151,7 +148,7 @@
     </div>
   </header>
 
-  <!-- CONTAINER SCROLL UTAMA (REVISI: Padding bottom ditambah ke pb-44 agar kartu tidak terpotong dock) -->
+  <!-- CONTAINER SCROLL UTAMA -->
   <div id="scrollableArea" class="pt-16 pb-44 px-3 sm:px-6">
     <div class="max-w-xl mx-auto">
 
@@ -164,25 +161,21 @@
         <span id="loadingText" class="text-xs text-slate-500">Memuat database santri...</span>
       </div>
 
-      <!-- CONTAINER HASIL PENCARIAN -->
+      <!-- HASIL PENCARIAN / HOME WIDGET -->
       <div id="infoMessage" class="mt-1"></div>
       <div id="resultContainer" class="mt-2"></div>
 
     </div>
   </div>
 
-  <!-- FLOATING BOTTOM DOCK PENCARIAN -->
+  <!-- FLOATING BOTTOM DOCK -->
   <div class="fixed bottom-4 inset-x-0 mx-auto max-w-lg w-[94%] z-40">
-    
-    <!-- SMART QUERY BADGE FLOATING -->
-    <div id="smartQueryBadge" class="hidden mb-2 p-2.5 bg-indigo-900/90 backdrop-blur-md text-white rounded-2xl text-xs shadow-lg flex items-center justify-between border border-indigo-700/50">
+    <div id="smartQueryBadge" class="hidden mb-2 p-2.5 bg-indigo-900/90 backdrop-blur-md text-white rounded-2xl text-xs shadow-lg flex items-center justify-between border border-indigo-700/50 transition-all duration-300">
       <span id="smartQueryText" class="font-medium truncate pr-2">🔍 Smart Filter Aktif</span>
       <button onclick="resetSmartQuery()" class="text-[10px] font-bold bg-indigo-700 hover:bg-indigo-600 px-2.5 py-1 rounded-lg shrink-0">Reset</button>
     </div>
 
-    <!-- MAIN FLOATING DOCK CARD -->
     <div class="bg-white/90 backdrop-blur-xl border border-slate-200/80 shadow-2xl rounded-3xl p-2 flex items-center gap-2 transition-all">
-      
       <button onclick="openFeatureMenuModal()" class="p-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl transition active:scale-95 shrink-0 relative" title="Fitur & Menu">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -197,11 +190,10 @@
               class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-2xl font-bold text-xs shadow-md transition shrink-0 active:scale-95 disabled:opacity-50">
         Cari
       </button>
-
     </div>
   </div>
 
-  <!-- MODAL MENU POPUP UTAMA -->
+  <!-- MODAL MENU POPUP -->
   <div id="featureMenuModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
     <div id="featureMenuCard" class="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-200 flex flex-col relative">
       <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4 sm:hidden"></div>
@@ -277,7 +269,7 @@
     </div>
   </div>
 
-  <!-- MODAL PETA GIS INTERAKTIF -->
+  <!-- MODAL PETA GIS -->
   <div id="mapModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[110] flex items-center justify-center p-3 sm:p-4 hidden">
     <div id="mapModalCard" class="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden relative">
       <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -296,7 +288,7 @@
     </div>
   </div>
 
-  <!-- MODAL KOMPARASI SANTRI SIDE-BY-SIDE -->
+  <!-- MODAL KOMPARASI -->
   <div id="compareModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[110] flex items-center justify-center p-3 sm:p-4 hidden">
     <div id="compareModalCard" class="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden relative">
       <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -309,12 +301,11 @@
         <button onclick="closeCompareModal()" class="text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">✕</button>
       </div>
 
-      <div id="compareTableWrapper" class="p-4 flex-grow modal-scrollable overflow-x-auto">
-      </div>
+      <div id="compareTableWrapper" class="p-4 flex-grow modal-scrollable overflow-x-auto"></div>
     </div>
   </div>
 
-  <!-- MODAL STATISTIK & DASHBOARD -->
+  <!-- MODAL STATISTIK -->
   <div id="statsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-3 sm:p-4 hidden">
     <div id="statsModalCard" class="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden relative">
       <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -350,7 +341,7 @@
     </div>
   </div>
 
-  <!-- MODAL TABEL DATABASE SANTRI LENGKAP -->
+  <!-- MODAL TABEL DATABASE -->
   <div id="tableModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-2 sm:p-4 hidden">
     <div id="tableModalCard" class="bg-white rounded-3xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
       <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
@@ -379,11 +370,9 @@
       <div class="flex-grow modal-scrollable p-2 sm:p-4">
         <table class="w-full text-left text-xs border-collapse">
           <thead>
-            <tr id="tableHeaderRow" class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10">
-            </tr>
+            <tr id="tableHeaderRow" class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10"></tr>
           </thead>
-          <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700 selectable-text">
-          </tbody>
+          <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700 selectable-text"></tbody>
         </table>
       </div>
 
@@ -401,7 +390,7 @@
     </div>
   </div>
 
-  <!-- MODAL POPUP FILTER -->
+  <!-- MODAL FILTER POPUP -->
   <div id="filterModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[130] flex items-center justify-center p-4 hidden">
     <div id="filterModalCard" class="bg-white rounded-3xl max-w-sm w-full p-4 shadow-2xl border border-slate-200 flex flex-col max-h-[85vh]">
       <div class="flex justify-between items-center mb-1">
@@ -417,8 +406,7 @@
         <button type="button" onclick="selectAllFilterOptions(false)" class="text-rose-500 hover:underline font-semibold">✕ Hapus</button>
       </div>
       
-      <div id="filterOptionList" class="flex-grow modal-scrollable border border-slate-100 rounded-xl p-2 space-y-1 max-h-60 text-xs">
-      </div>
+      <div id="filterOptionList" class="flex-grow modal-scrollable border border-slate-100 rounded-xl p-2 space-y-1 max-h-60 text-xs"></div>
       
       <div class="flex gap-2 mt-4 pt-2 border-t border-slate-100">
         <button type="button" onclick="closeFilterModal()" class="w-1/2 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50">Batal</button>
@@ -427,12 +415,10 @@
     </div>
   </div>
 
-  <!-- MODAL POPUP FOTO SANTRI -->
+  <!-- MODAL POPUP FOTO -->
   <div id="photoModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 hidden">
     <div id="photoModalCard" class="bg-white rounded-3xl max-w-lg w-full p-5 relative shadow-2xl border border-slate-200 overflow-hidden flex flex-col items-center">
-      <button onclick="closePhotoModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center font-bold transition z-10">
-        ✕
-      </button>
+      <button onclick="closePhotoModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center font-bold transition z-10">✕</button>
 
       <h3 id="modalName" class="text-base font-bold text-slate-800 text-center pr-6 mb-0.5 selectable-text">Foto Santri</h3>
       <p id="modalPps" class="text-xs text-slate-400 text-center selectable-text"></p>
@@ -518,7 +504,6 @@
       if (scrollArea.scrollTop <= 0 && distanceY > 0) e.preventDefault();
     }, { passive: false });
 
-    /* DATA DB DENGAN DUKUNGAN SHEET MUSTAMIK */
     let DB = {
       headersUtama: [],
       dataUtama: [],
@@ -871,6 +856,100 @@
       }
     }
 
+    /* FITUR PERHITUNGAN JAM ISTIWA & HIJRIYAH UNTUK SIDOGIRI */
+    let clockTimer = null;
+
+    function getEquationOfTime(date) {
+      const startOfYear = new Date(date.getFullYear(), 0, 0);
+      const diff = date - startOfYear;
+      const oneDay = 1000 * 60 * 60 * 24;
+      const dayOfYear = Math.floor(diff / oneDay);
+
+      const B = (2 * Math.PI * (dayOfYear - 81)) / 365;
+      return 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+    }
+
+    function getSidogiriIstiwaTime(now) {
+      const lonSidogiri = 112.83771003783936;
+      const lonWib = 105.0;
+      const lonDiffDeg = lonSidogiri - lonWib;
+      const lonDiffMinutes = lonDiffDeg * 4;
+
+      const eotMinutes = getEquationOfTime(now);
+
+      const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const wibMs = utcMs + (7 * 3600000);
+      const wibDate = new Date(wibMs);
+
+      const secondsSinceWibMidnight = (wibDate.getHours() * 3600) + (wibDate.getMinutes() * 60) + wibDate.getSeconds();
+      const transitWibSeconds = (12 * 3600) - (lonDiffMinutes * 60) - (eotMinutes * 60);
+
+      // Tambahkan 12 jam (43200 detik) agar titik transit tepat di jam 12:00 Istiwa
+      let istiwaSeconds = secondsSinceWibMidnight - transitWibSeconds + 43200;
+
+      while (istiwaSeconds < 0) istiwaSeconds += 86400;
+      while (istiwaSeconds >= 86400) istiwaSeconds -= 86400;
+
+      const hours24 = Math.floor(istiwaSeconds / 3600);
+      const m = Math.floor((istiwaSeconds % 3600) / 60);
+      const s = Math.floor(istiwaSeconds % 60);
+
+      const hours12 = hours24 % 12 || 12;
+
+      return {
+        h: String(hours12).padStart(2, '0'),
+        m: String(m).padStart(2, '0'),
+        s: String(s).padStart(2, '0')
+      };
+    }
+
+    function getFormattedHijriDateArabic(now) {
+      try {
+        const formatter = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        });
+        return formatter.format(now);
+      } catch (e) {
+        return "٨ ربيع الآخر ١٤٤٨ هـ";
+      }
+    }
+
+    function updateSidogiriClocks() {
+      const now = new Date();
+
+      const elWib = document.getElementById('clockWib');
+      const elIstiwa = document.getElementById('clockIstiwa');
+      const elMasehi = document.getElementById('dateMasehi');
+      const elHijri = document.getElementById('dateHijri');
+
+      if (!elWib || !elIstiwa) return;
+
+      // WIB FORMAT 12 JAM (TANPA AM/PM)
+      let hoursWib = now.getHours();
+      hoursWib = hoursWib % 12 || 12;
+      const wibH = String(hoursWib).padStart(2, '0');
+      const wibM = String(now.getMinutes()).padStart(2, '0');
+      const wibS = String(now.getSeconds()).padStart(2, '0');
+
+      elWib.innerHTML = `${wibH}:${wibM}:${wibS}`;
+
+      // ISTIWA FORMAT 12 JAM (TANPA AM/PM)
+      const ist = getSidogiriIstiwaTime(now);
+      elIstiwa.innerHTML = `${ist.h}:${ist.m}:${ist.s}`;
+
+      if (elMasehi) {
+        const optionsMasehi = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+        elMasehi.innerText = now.toLocaleDateString('id-ID', optionsMasehi);
+      }
+
+      if (elHijri) {
+        elHijri.innerText = getFormattedHijriDateArabic(now);
+      }
+    }
+
+    /* RENDERING WIDGET TAMPILAN AWAL ALA SYSTEM WIDGET iPHONE DEGAN LOGO SIDOGIRI */
     function renderEmptyState() {
       const container = document.getElementById('resultContainer');
       const infoMsg = document.getElementById('infoMessage');
@@ -878,15 +957,48 @@
       if (!container) return;
 
       container.innerHTML = `
-        <div class="text-center py-16 px-4 border border-slate-200/70 rounded-3xl bg-white shadow-sm my-2 select-none">
-          <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl font-bold shadow-inner">
-            🔍
+        <div class="relative overflow-hidden bg-white/80 backdrop-blur-xl border border-slate-200/80 rounded-[28px] p-5 shadow-xl shadow-slate-200/50 my-2 select-none">
+          
+          <!-- LOGO SIDOGIRI BESAR TANPA FRAME & FULL WIDTH -->
+          <div class="w-full text-center mb-3">
+            <span class="sidogiri-logo text-4xl sm:text-5xl tracking-tighter block w-full text-slate-800">sıdogırı</span>
           </div>
-          <h3 class="font-bold text-slate-800 text-sm mb-1">Siap Mencari Data Santri</h3>
-          <p class="text-slate-400 text-xs max-w-xs mx-auto leading-relaxed">
-            Ketik kata kunci fleksibel di bawah (contoh: <b>pasuruan 1 tsanawiyah tahfidz T-02 2002</b>).
-          </p>
+
+          <!-- DUAL CLOCK DISPLAY - iOS WIDGET STYLE -->
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="bg-slate-50/90 border border-slate-200/80 rounded-2xl p-3.5 shadow-inner flex flex-col items-center justify-center">
+              <span class="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">WIB (STANDAR)</span>
+              <div id="clockWib" class="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">00:00:00</div>
+            </div>
+            
+            <div class="bg-emerald-50/80 border border-emerald-200/80 rounded-2xl p-3.5 shadow-inner flex flex-col items-center justify-center">
+              <span class="text-[9px] font-extrabold text-emerald-600 uppercase tracking-widest block mb-1">ISTIWA</span>
+              <div id="clockIstiwa" class="text-xl sm:text-2xl font-black text-emerald-800 tracking-tight">00:00:00</div>
+            </div>
+          </div>
+
+          <!-- TANGGAL MASEHI & HIJRIYAH (ARABIC) -->
+          <div class="bg-slate-100/80 rounded-2xl p-3 border border-slate-200/60 text-xs font-semibold text-slate-700 flex flex-col sm:flex-row items-center justify-between gap-1.5">
+            <div class="flex items-center gap-1.5 text-slate-600">
+              <span id="dateMasehi">-</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-emerald-800 font-bold text-sm tracking-wide">
+              <span id="dateHijri">-</span>
+            </div>
+          </div>
+
+          <div class="pt-4 mt-4 border-t border-slate-100 text-center">
+            <h3 class="font-bold text-slate-800 text-xs mb-0.5">Pencarian Data Santri</h3>
+            <p class="text-slate-400 text-[11px] max-w-xs mx-auto leading-relaxed">
+              Ketik kata kunci di bawah (contoh: <b>pasuruan 1 tsanawiyah tahfidz T-02 2002</b>).
+            </p>
+          </div>
+
         </div>`;
+
+      updateSidogiriClocks();
+      if (clockTimer) clearInterval(clockTimer);
+      clockTimer = setInterval(updateSidogiriClocks, 1000);
     }
 
     function initDatabase(res, isFromCache) {
@@ -913,6 +1025,7 @@
     let searchTimeout = null;
     let searchResults = [];
     let currentCardIndex = 0;
+    let smartQueryTimeout = null;
 
     function handleKeyPress(event) {
       clearTimeout(searchTimeout);
@@ -923,7 +1036,6 @@
       }
     }
 
-    /* PENCARIAN CERDAS DENGAN EKSTRAKSI MULTI-FILTER ALA GOOGLE */
     function parseNaturalLanguageQuery(queryStr) {
       let rawTokens = queryStr.toLowerCase().trim().split(/\s+/);
       
@@ -933,7 +1045,6 @@
         keywordRaw: queryStr
       };
 
-      // 1. Ekstraksi Status Program
       let cleanTokens = [];
       rawTokens.forEach(tok => {
         if (/^tahfidz$/i.test(tok)) {
@@ -954,6 +1065,7 @@
     }
 
     function resetSmartQuery() {
+      clearTimeout(smartQueryTimeout);
       document.getElementById('searchInput').value = '';
       document.getElementById('smartQueryBadge').classList.add('hidden');
       renderEmptyState();
@@ -966,6 +1078,9 @@
       const infoMsg = document.getElementById('infoMessage');
       const smartBadge = document.getElementById('smartQueryBadge');
       const smartText = document.getElementById('smartQueryText');
+
+      clearTimeout(smartQueryTimeout);
+      if (clockTimer) clearInterval(clockTimer);
 
       container.innerHTML = '';
       infoMsg.innerHTML = '';
@@ -992,6 +1107,10 @@
         if (badgeBadges.length > 0) {
           smartText.innerHTML = `🤖 <strong>Smart Filter:</strong> ${badgeBadges.join(' | ')}`;
           smartBadge.classList.remove('hidden');
+          
+          smartQueryTimeout = setTimeout(() => {
+            smartBadge.classList.add('hidden');
+          }, 3500);
         } else {
           smartBadge.classList.add('hidden');
         }
@@ -999,7 +1118,6 @@
         searchResults = DB.dataUtama.filter(row => {
           const idPps = row[0] ? String(row[0]).trim() : '';
 
-          // Filter 1: Status Program
           if (parsed.statusProgram) {
             if (parsed.statusProgram === 'TAHFIDZ' && !DB.tahfidzMap.hasOwnProperty(idPps)) return false;
             if (parsed.statusProgram === 'MUTAALLIM' && !DB.mutaallimMap.hasOwnProperty(idPps)) return false;
@@ -1009,7 +1127,6 @@
 
           if (tokens.length === 0) return true;
 
-          // Gabungkan seluruh data santri (termasuk sheet mutaallim, mualim, tahfidz, mustamik) untuk dicocokkan dengan token
           let fullRowText = row.map(cell => String(cell || '').toLowerCase()).join(' ');
 
           if (DB.mutaallimMap[idPps]) fullRowText += ' ' + Object.values(DB.mutaallimMap[idPps]).join(' ').toLowerCase();
@@ -1017,7 +1134,6 @@
           if (DB.tahfidzMap[idPps]) fullRowText += ' ' + Object.values(DB.tahfidzMap[idPps]).join(' ').toLowerCase();
           if (DB.mustamikMap && DB.mustamikMap[idPps]) fullRowText += ' ' + Object.values(DB.mustamikMap[idPps]).join(' ').toLowerCase();
 
-          // Kriteria Google-Like Multi-Token: Setiap token HARUS ada di dalam salah satu kolom data santri
           return tokens.every(tok => fullRowText.includes(tok));
         });
 
@@ -1234,7 +1350,6 @@
       if (isMustamik) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-100/80 text-purple-800 border border-purple-200">Mustamik</span>`);
       if (statusBadges.length === 0) statusBadges.push(`<span class="px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-600 border border-slate-200">Santri Regular</span>`);
 
-      // REVISI: Sembunyikan baris jika bernilai kosong / "-" & tingkatkan kontras teks
       let detailUtamaHtml = '';
       DB.headersUtama.forEach((header, idx) => {
         let namaHeader = header.toUpperCase();
@@ -1243,7 +1358,7 @@
         let rawVal = row[idx];
         if (rawVal === undefined || rawVal === null) return;
         let strVal = String(rawVal).trim();
-        if (strVal === "" || strVal === "-") return; // SKIP BARIS KOSONG ATAU "-"
+        if (strVal === "" || strVal === "-") return;
 
         let val = escapeHTML(strVal);
         detailUtamaHtml += `
@@ -1279,7 +1394,6 @@
             📋 Salin
           </button>
 
-          <!-- HEADER KARTU SANTRI (REVISI: pr-20 agar nama panjang tak menabrak tombol Salin) -->
           <div class="flex items-start gap-3.5 pb-4 border-b border-slate-100 pr-20">
             <div class="relative group cursor-pointer flex-shrink-0 mt-0.5" onclick="openPhotoModal()">
               ${safeFotoUrl ? `
@@ -1307,7 +1421,6 @@
 
           ${statusSectionsHtml}
 
-          <!-- TOMBOL AKSI UTAMA -->
           <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
             <div class="flex items-center gap-2">
               <span class="text-[11px] text-slate-400 font-medium mr-1 select-none">Hubungi:</span>
@@ -1316,24 +1429,20 @@
 
             <div class="flex items-center gap-1.5">
               <button onclick="toggleCompare(event, decodeURIComponent('${encodeURIComponent(idPps)}'))" 
-                      class="text-xs font-bold ${compareBtnClass} px-2.5 py-1.5 rounded-xl border shadow-sm transition flex items-center gap-1 active:scale-95 select-none" 
-                      title="Tambah ke Komparasi">
+                      class="text-xs font-bold ${compareBtnClass} px-2.5 py-1.5 rounded-xl border shadow-sm transition flex items-center gap-1 active:scale-95 select-none">
                 ${compareIconText}
               </button>
               
               <button onclick="toggleBookmark(event, decodeURIComponent('${encodeURIComponent(idPps)}'))" 
-                      class="text-xs font-bold ${bookmarkBtnClass} px-2.5 py-1.5 rounded-xl border shadow-sm transition flex items-center gap-1 active:scale-95 select-none" 
-                      title="Simpan Santri ke Bookmark">
+                      class="text-xs font-bold ${bookmarkBtnClass} px-2.5 py-1.5 rounded-xl border shadow-sm transition flex items-center gap-1 active:scale-95 select-none">
                 ${bookmarkIconText}
               </button>
             </div>
           </div>
 
-          <!-- NAVIGASI KARTU -->
           <div class="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-100 select-none">
             <button onclick="prevCard(event)" 
                     aria-label="Sebelumnya"
-                    title="Kartu Sebelumnya"
                     class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-black text-sm flex items-center justify-center transition disabled:opacity-25 disabled:pointer-events-none shrink-0" 
                     ${currentCardIndex === 0 ? 'disabled' : ''}>
               ❮
@@ -1347,7 +1456,6 @@
 
             <button onclick="nextCard(event)" 
                     aria-label="Selanjutnya"
-                    title="Kartu Selanjutnya"
                     class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-black text-sm flex items-center justify-center transition disabled:opacity-25 disabled:pointer-events-none shrink-0" 
                     ${currentCardIndex === total - 1 ? 'disabled' : ''}>
               ❯
@@ -1442,7 +1550,6 @@
       cardDeltaX = 0;
     }
 
-    // REVISI: Sembunyikan item bernilai kosong/'-' pada rincian status
     function buildExtraCardMinimal(title, dataObj, colorClass) {
       if (!dataObj) return '';
       let items = '';
@@ -1450,7 +1557,7 @@
         let raw = dataObj[key];
         if (raw === undefined || raw === null) continue;
         let str = String(raw).trim();
-        if (str === "" || str === "-") continue; // SKIP JIKA KOSONG ATAU "-"
+        if (str === "" || str === "-") continue;
 
         items += `
           <div class="py-1 flex justify-between text-[11px]">
@@ -1459,7 +1566,7 @@
           </div>`;
       }
 
-      if (!items) return ''; // Jangan tampilkan kotak rincian jika seluruh datanya kosong
+      if (!items) return '';
 
       return `
         <div class="mt-3 p-3 rounded-xl border ${colorClass}">
@@ -1982,7 +2089,6 @@
       }, 350);
     }
 
-    /* PREPARE UNIFIED TABEL DATABASE DENGAN TAMBAHAN MAP MUSTAMIK */
     function prepareUnifiedTableData() {
       if (!DB.dataUtama || DB.dataUtama.length === 0) return;
 
@@ -2354,7 +2460,6 @@
       switchStatsTab(activeStatsTab || 'domisili');
     }
 
-    /* RENDER DASHBOARD WIDGET DENGAN 5 ITEM TERMASUK MUSTAMIK */
     function renderSummaryWidgets() {
       const widgetContainer = document.getElementById('statsSummaryWidget');
       const totalSantri = unifiedTableData.length;
@@ -2460,7 +2565,6 @@
       return document.getElementById('statsChartCanvas').getContext('2d');
     }
 
-    /* GRAFIK STATISTIK STATUS DENGAN DUKUNGAN MUSTAMIK */
     function renderStatsChart(tabName) {
       const ctx = getFreshChartContext(260);
       const footerEl = document.getElementById('statsChartFooter');
@@ -2583,7 +2687,7 @@
         }
       });
 
-      footerEl.innerHTML = `${titleCaption} (Total ${labels.length} Kategori Terdetectsi)`;
+      footerEl.innerHTML = `${titleCaption} (Total ${labels.length} Kategori Terdeteksi)`;
     }
   </script>
 </body>
